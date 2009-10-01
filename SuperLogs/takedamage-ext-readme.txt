@@ -1,0 +1,1 @@
+Currently the takedamage extension (and related gamedata file) is only utilized in the SuperLogs: TF2 plugin. It is not required, but enables extra functionality. There is no need to have it for any other game's plugin.
