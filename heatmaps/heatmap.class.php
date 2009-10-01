@@ -489,7 +489,7 @@ class Heatmap {
 			$_ARG = array();
 			foreach ($argv as $arg) {
 				if (preg_match('/\-\-[a-zA-Z0-9]*=.*/', $arg)) {
-					$str = split('=', $arg);
+					$str = explode('=', $arg);
 					$arg = '';
 					$key = preg_replace('/\-\-/', '', $str[0]);
 					for ( $i = 1; $i < count($str); $i++ ) {
