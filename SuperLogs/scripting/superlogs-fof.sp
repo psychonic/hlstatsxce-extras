@@ -27,7 +27,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: FOF"
-#define VERSION "1.0"
+#define VERSION "1.0.1"
 
 #define MAX_LOG_WEAPONS 18
 #define MAX_WEAPON_LEN 16
@@ -189,11 +189,11 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 
 public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontBroadcast)
 {
-	new attacker = GetEventInt(event, "attacker");
+	new attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
 	
 	if (g_loglocations)
 	{
-		LogKillLoc(GetClientOfUserId(attacker), GetClientOfUserId(GetEventInt(event, "userid")));
+		LogKillLoc(attacker, GetClientOfUserId(GetEventInt(event, "userid")));
 	}
 	
 	if (g_logheadshots && GetEventBool(event, "headshot"))
