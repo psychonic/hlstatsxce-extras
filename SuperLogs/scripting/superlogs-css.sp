@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: CSS"
-#define VERSION "1.0.1"
+#define VERSION "1.0.2"
 
 #define MAX_LOG_WEAPONS 28
 #define IGNORE_SHOTS_START 25
@@ -197,7 +197,7 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 
 	if (g_logheadshots && GetEventBool(event, "headshot"))
 	{
-		LogPlayerEvent(attacker, "triggered", "headshot");
+		LogPlayerEvent(GetClientOfUserId(attacker), "triggered", "headshot");
 	}
 	
 	return Plugin_Continue;
