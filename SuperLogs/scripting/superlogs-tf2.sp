@@ -27,7 +27,7 @@
 #include <tf2_stocks>
 
 #define NAME "SuperLogs: TF2"
-#define VERSION "1.3.2"
+#define VERSION "1.3.3"
 
 // update fields with //u when adding weapons
 
@@ -38,19 +38,12 @@
 #define SHOOT 1
 #define HIT 2
 
-#if SOURCEMOD_V_MAJOR >= 1 && (SOURCEMOD_V_MINOR >= 3 || (SOURCEMOD_V_MINOR >= 2 && SOURCEMOD_V_RELEASE >= 4))
-	#define MAX_LOG_WEAPONS 21
-	#define HASUNLOCKABLE_IDX_START 5
-	#define HASUNLOCKABLE_IDX_END 8
-	#define SHOOTAUXCOUNT 5
-	#define HITAUXCOUNT 2
-#else
-	#define MAX_LOG_WEAPONS 20 //u
-	#define HASUNLOCKABLE_IDX_START 4
-	#define HASUNLOCKABLE_IDX_END 7
-	#define SHOOTAUXCOUNT 4
-	#define HITAUXCOUNT 1
-#endif
+#define MAX_LOG_WEAPONS 21
+#define HASUNLOCKABLE_IDX_START 5
+#define HASUNLOCKABLE_IDX_END 8
+#define SHOOTAUXCOUNT 5
+#define HITAUXCOUNT 2
+#define BULLET_WEAPONS 1048288
 
 #define DISPENSER 0
 #define SENTRY 3
@@ -58,7 +51,7 @@
 #define TELEEXIT 2
 
 #define DMG_BURN (1 << 3)
-#define BULLET_WEAPONS 1048288 //u
+ //u
 
 new Handle:g_cvar_actions = INVALID_HANDLE;
 new Handle:g_cvar_teleports = INVALID_HANDLE;
@@ -98,9 +91,7 @@ public Plugin:myinfo = {
 new g_weapon_stats[MAXPLAYERS+1][MAX_LOG_WEAPONS][7];
 new const String:g_weapon_list[MAX_LOG_WEAPONS][MAX_WEAPON_LEN] = {
 	"flaregun",
-#if SOURCEMOD_V_MAJOR >= 1 && (SOURCEMOD_V_MINOR >= 3 || (SOURCEMOD_V_MINOR >= 2 && SOURCEMOD_V_RELEASE >= 4))
 	"tf_projectile_arrow",
-#endif
 	"tf_projectile_rocket",
 	"tf_projectile_pipe",
 	"tf_projectile_pipe_remote",
@@ -124,20 +115,15 @@ new const String:g_weapon_list[MAX_LOG_WEAPONS][MAX_WEAPON_LEN] = {
 
 new const String:g_weapon_list_shootaux[SHOOTAUXCOUNT][MAX_WEAPON_LEN] = {
 	"flaregun",
-#if SOURCEMOD_V_MAJOR >= 1 && (SOURCEMOD_V_MINOR >= 3 || (SOURCEMOD_V_MINOR >= 2 && SOURCEMOD_V_RELEASE >= 4))
 	"compound_bow",
-#endif
 	"rocketlauncher",
 	"grenadelauncher",
 	"pipebomblauncher"
 };
 
 new const String:g_weapon_list_hitaux[HITAUXCOUNT][MAX_WEAPON_LEN] = {
-	"tf_projectile_flare"
-#if SOURCEMOD_V_MAJOR >= 1 && (SOURCEMOD_V_MINOR >= 3 || (SOURCEMOD_V_MINOR >= 2 && SOURCEMOD_V_RELEASE >= 4))
-	,
+	"tf_projectile_flare",
 	"tf_projectile_arrow_fire"
-#endif
 };
 
 new g_weapon_hashes[MAX_LOG_WEAPONS];
@@ -475,6 +461,14 @@ public Action:OnTakeDamage(victim, attacker, inflictor, Float:damage, damagetype
 				{
 					weaponent = GetEntPropEnt(owner, Prop_Send, "m_hActiveWeapon");
 				}
+				else if (StrContains(weapon, "pipe") != -1)
+				{
+					owner = GetEntPropEnt(inflictor, Prop_Send, "m_hThrower");
+					if (owner > -1)
+					{
+						weaponent = GetEntPropEnt(owner, Prop_Send, "m_hActiveWeapon");
+					}
+				}
 			}
 			else
 			{
@@ -489,6 +483,7 @@ public Action:OnTakeDamage(victim, attacker, inflictor, Float:damage, damagetype
 			{
 				weapon_index += UNLOCKABLE_OFFSET;
 			}
+			//LogToGame("DEBUG: damagetime! MaxClients: %d; attacker: %d; weapon_index: %d", MaxClients, attacker, weapon_index);
 			g_weapon_stats[attacker][weapon_index][LOG_HIT_DAMAGE] += idamage;
 			g_weapon_stats[attacker][weapon_index][LOG_HIT_HITS]++;
 		}
