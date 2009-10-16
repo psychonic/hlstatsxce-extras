@@ -108,6 +108,10 @@ $hlxdbs[] = "hlstatsx";
 /***** DON'T EDIT BELOW ******
 /*****************************/
 
+if (!extension_loaded('mysqli')) {
+	die("This script requires the MySQLi extension to be enabled.  Consult your administrator, or edit your php.ini file, to enable this extension.");
+}
+
 $usesb = (SB_HOST == ""||SB_PORT == ""||SB_USER == ""||SB_PASS == ""||SB_NAME == ""||SB_PREFIX == ""?false:true);
 $useamx = (AMX_HOST == ""||AMX_PORT == ""||AMX_USER == ""||AMX_PASS == ""||AMX_NAME == ""||AMX_PREFIX == ""?false:true);
 $usebm = (BM_HOST == ""||BM_PORT == ""||BM_USER == ""||BM_PASS == ""||BM_NAME == ""||BM_PREFIX == ""?false:true);
