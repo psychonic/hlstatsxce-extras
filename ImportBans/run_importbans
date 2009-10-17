@@ -67,7 +67,7 @@ case $BANSYSTEM in
 	;;
 	2)
 		echo Using hlstatsxbans.php >> logs/log`date +_%Y%m%d` 2>&1
-		php hlstatsxbans.php >> logs/log`date +_%Y%m%d` 2>&1
+		/usr/bin/php `pwd`/hlstatsxban.php >> logs/log`date +_%Y%m%d` 2>&1
 	;;
 	*) 
 		echo Warning: BANSYSTEM is not correctly configured.  Please check your configuration.
