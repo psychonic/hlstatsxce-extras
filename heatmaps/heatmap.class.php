@@ -166,6 +166,7 @@ class Heatmap {
 
 			// Does the source image exists? else there is no idea to spend resources on it.
 			if (!file_exists(dirname(__FILE__) . "/src/" . $mapinfo[$code][$map]['game'] . "/" . $map . ".jpg")) {
+				show::Event("FILE", dirname(__FILE__) . "/src/" . $mapinfo[$code][$map]['game'] . "/" . $map . ".jpg doesn't exists", 3);
 				return false;
 			}
 									
