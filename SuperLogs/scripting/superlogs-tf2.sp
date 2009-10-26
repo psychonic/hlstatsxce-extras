@@ -27,7 +27,7 @@
 #include <tf2_stocks>
 
 #define NAME "SuperLogs: TF2"
-#define VERSION "1.3.3"
+#define VERSION "1.3.4"
 
 // update fields with //u when adding weapons
 
@@ -51,7 +51,6 @@
 #define TELEEXIT 2
 
 #define DMG_BURN (1 << 3)
- //u
 
 new Handle:g_cvar_actions = INVALID_HANDLE;
 new Handle:g_cvar_teleports = INVALID_HANDLE;
@@ -138,6 +137,8 @@ new TFClassType:g_iNextRole[MAXPLAYERS+1];
 new TFClassType:g_iCurrentRole[MAXPLAYERS+1];
 new g_iBuildingCount[MAXPLAYERS+1][4];
 new g_iMaxEntities;
+new g_iHealsOff;
+new g_iWeaponOff;
 
 #include <loghelper>
 #include <wstatshelper>
@@ -194,11 +195,14 @@ public OnPluginStart()
 	
 	GetTeams();
 	
+	g_iHealsOff = FindSendPropOffs("CTFPlayer", "m_iHealPoints");
+	g_iWeaponOff = FindSendPropOffs("CTFPlayer", "m_hActiveWeapon");
+	
 	for (new i = 1; i <= MaxClients; i++)
 	{
 		if (IsClientInGame(i) && IsClientConnected(i))
 		{
-			g_iHealPointCache[i] = GetEntProp(i, Prop_Send, "m_iHealPoints");
+			g_iHealPointCache[i] = GetEntData(i, g_iHealsOff);
 		}
 	}
 	
@@ -444,7 +448,7 @@ public Action:OnTakeDamage(victim, attacker, inflictor, Float:damage, damagetype
 			// is a player
 			decl String:weapon[MAX_WEAPON_LEN + PREFIX_LEN];
 			GetClientWeapon(inflictor, weapon, sizeof(weapon));
-			weaponent = GetEntPropEnt(attacker, Prop_Send, "m_hActiveWeapon");
+			weaponent = GetEntDataEnt2(attacker, g_iWeaponOff);
 			weapon_index = get_weapon_index(weapon[PREFIX_LEN]);
 		}
 		else if (IsValidEdict(inflictor))
@@ -456,17 +460,17 @@ public Action:OnTakeDamage(victim, attacker, inflictor, Float:damage, damagetype
 			{
 				// is projectile
 				weapon_index = get_weapon_index(weapon, HIT);
-				new owner = GetEntPropEnt(inflictor, Prop_Send, "m_hOwnerEntity");
+				new owner = GetEntProp(inflictor, Prop_Send, "m_hOwnerEntity");
 				if (owner > -1)
 				{
-					weaponent = GetEntPropEnt(owner, Prop_Send, "m_hActiveWeapon");
+					weaponent = GetEntDataEnt2(owner, g_iWeaponOff);
 				}
 				else if (StrContains(weapon, "pipe") != -1)
 				{
 					owner = GetEntPropEnt(inflictor, Prop_Send, "m_hThrower");
 					if (owner > -1)
 					{
-						weaponent = GetEntPropEnt(owner, Prop_Send, "m_hActiveWeapon");
+						weaponent = GetEntDataEnt2(owner, g_iWeaponOff);
 					}
 				}
 			}
@@ -557,16 +561,9 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 			{
 				LogPlayerEvent(attacker, "triggered", "crit_kill");
 			}
-			else if (victim > 0)
+			else if (bits & 16384)
 			{
-				if (bits & 16)
-				{
-					LogPlayerEvent(victim, "triggered", "hit_by_train");
-				}
-				else if (bits & 16384)
-				{
-					LogPlayerEvent(victim, "triggered", "drowned");
-				}
+				LogPlayerEvent(victim, "triggered", "drowned");
 			}
 			
 			if (death_flags & 16)
@@ -729,7 +726,7 @@ public Event_RoundEnd(Handle:event, const String:name[], bool:dontBroadcast)
 
 DumpHeals(client)
 {
-	new iTotalHealPoints = GetEntProp(client, Prop_Send, "m_iHealPoints");
+	new iTotalHealPoints = GetEntData(client, g_iHealsOff);
 	new iLifeHealPoints = iTotalHealPoints - g_iHealPointCache[client];
 	if (iLifeHealPoints > 0 && TF2_GetPlayerClass(client) != TFClass_Medic)
 	{
