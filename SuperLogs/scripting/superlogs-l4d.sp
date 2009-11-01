@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: L4D"
-#define VERSION "1.0.1"
+#define VERSION "1.1-pre1"
 
 #define MAX_LOG_WEAPONS 16
 #define IGNORE_SHOTS_START 13
@@ -64,6 +64,8 @@ new bool:g_logwstats = true;
 new bool:g_logactions = true;
 new bool:g_logheadshots = false;
 
+new bool:g_bIsL4D2;
+
 #include <loghelper>
 #include <wstatshelper>
 
@@ -97,6 +99,13 @@ public OnPluginStart()
 	CreateTimer(1.0, LogMap);
 	
 	GetTeams();
+	
+	// hacky L4D2 detection
+	static Handle:temp = FindConVar("vomitjar_radius");
+	if (temp != INVALID_HANDLE)
+	{
+		g_bIsL4D2 = true;
+	}
 }
 
 
@@ -360,9 +369,9 @@ public Action:Event_StartleWitch(Handle:event, const String:name[], bool:dontBro
 {
 	new player = GetClientOfUserId(GetEventInt(event, "userid"));
 	
-	if (player > 0)
+	if (player > 0 && (!g_bIsL4D2 || GetEventBool(event, "first")))
 	{
-		LogPlayerEvent(player, "triggered", "startled_witch", true);
+			LogPlayerEvent(player, "triggered", "startled_witch", true);
 	}
 }
 
@@ -391,7 +400,7 @@ public Action:Event_Boomered(Handle:event, const String:name[], bool:dontBroadca
 	new player = GetClientOfUserId(GetEventInt(event, "attacker"));
 	new victim = GetClientOfUserId(GetEventInt(event, "userid"));
 	
-	if (player > 0)
+	if (player > 0 && (!b_IsL4D2 || GetEventBool(event, "by_boomer")))
 	{
 		if (victim > 0)
 		{
