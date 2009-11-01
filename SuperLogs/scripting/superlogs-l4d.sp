@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: L4D"
-#define VERSION "1.1-pre1"
+#define VERSION "1.1-pre2"
 
 #define MAX_LOG_WEAPONS 16
 #define IGNORE_SHOTS_START 13
@@ -124,7 +124,18 @@ hook_actions()
 	HookEvent("lunge_pounce", Event_Pounce);
 	HookEvent("player_now_it", Event_Boomered);
 	HookEvent("friendly_fire", Event_FF);
+	HookEvent("witch_killed", Event_WitchKilled);
 	HookEvent("award_earned", Event_Award);
+	if (g_bIsL4D2)
+	{
+		HookEvent("defibrillator_used", Event_Defib);
+		HookEvent("adrenaline_used", Event_Adrenaline);
+		HookEvent("jockey_ride", Event_JockeyRide);
+		HookEvent("charger_pummel_start", Event_ChargerPummelStart);
+		HookEvent("vomit_bomb_tank", Event_VomitBombTank);
+		HookEvent("scavenge_match_finished", Event_ScavengeEnd);
+		HookEvent("versus_match_finished", Event_VersusEnd);
+	}
 }
 
 unhook_actions()
@@ -136,7 +147,19 @@ unhook_actions()
 	UnhookEvent("lunge_pounce", Event_Pounce);
 	UnhookEvent("player_now_it", Event_Boomered);
 	UnhookEvent("friendly_fire", Event_FF);
+	UnhookEvent("witch_killed", Event_WitchKilled);
 	UnhookEvent("award_earned", Event_Award);
+	
+	if (g_bIsL4D2)
+	{
+		UnhookEvent("defibrillator_used", Event_Defib);
+		UnhookEvent("adrenaline_used", Event_Adrenaline);
+		UnhookEvent("jockey_ride", Event_JockeyRide);
+		UnhookEvent("charger_pummel_start", Event_ChargerPummelStart);
+		UnhookEvent("vomit_bomb_tank", Event_VomitBombTank);
+		UnhookEvent("scavenge_match_finished", Event_ScavengeEnd);
+		UnhookEvent("versus_match_finished", Event_VersusEnd);
+	}
 }
 
 hook_wstats()
@@ -147,7 +170,7 @@ hook_wstats()
 	HookEvent("infected_hurt", Event_InfectedHurt);
 	HookEvent("player_death", Event_PlayerDeath);
 	HookEvent("player_spawn", Event_PlayerSpawn);
-	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
+	HookEvent("round_end_message", Event_RoundEnd, EventHookMode_PostNoCopy);
 }
 
 unhook_wstats()
@@ -158,7 +181,7 @@ unhook_wstats()
 	UnhookEvent("infected_hurt", Event_InfectedHurt);
 	UnhookEvent("player_death", Event_PlayerDeath);
 	UnhookEvent("player_spawn", Event_PlayerSpawn);
-	UnhookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
+	UnhookEvent("round_end_message", Event_RoundEnd, EventHookMode_PostNoCopy);
 }
 
 
@@ -225,7 +248,7 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 }
 
 
-public Action:Event_InfectedHurt(Handle:event, const String:name[], bool:dontBroadcast)
+public Event_InfectedHurt(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	// "local"         "1"             // don't network this, its way too spammy
 	// "attacker"      "short"         // player userid who attacked
@@ -330,10 +353,12 @@ public Action:LogMap(Handle:timer)
 {
 	// Called 1 second after OnPluginStart since srcds does not log the first map loaded. Idea from Stormtrooper's "mapfix.sp" for psychostats
 	LogMapLoad();
+	
+	return Plugin_Continue;
 }
 
 
-public Action:Event_RescueSurvivor(Handle:event, const String:name[], bool:dontBroadcast)
+public Event_RescueSurvivor(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new player = GetClientOfUserId(GetEventInt(event, "rescuer"));
 	
@@ -343,7 +368,7 @@ public Action:Event_RescueSurvivor(Handle:event, const String:name[], bool:dontB
 	}
 }
 
-public Action:Event_Heal(Handle:event, const String:name[], bool:dontBroadcast)
+public Event_Heal(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new player = GetClientOfUserId(GetEventInt(event, "userid"));
 	
@@ -354,7 +379,7 @@ public Action:Event_Heal(Handle:event, const String:name[], bool:dontBroadcast)
 }
 
 
-public Action:Event_Revive(Handle:event, const String:name[], bool:dontBroadcast)
+public Event_Revive(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new player = GetClientOfUserId(GetEventInt(event, "userid"));
 	
@@ -365,7 +390,7 @@ public Action:Event_Revive(Handle:event, const String:name[], bool:dontBroadcast
 }
 
 
-public Action:Event_StartleWitch(Handle:event, const String:name[], bool:dontBroadcast)
+public Event_StartleWitch(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new player = GetClientOfUserId(GetEventInt(event, "userid"));
 	
@@ -376,26 +401,23 @@ public Action:Event_StartleWitch(Handle:event, const String:name[], bool:dontBro
 }
 
 
-public Action:Event_Pounce(Handle:event, const String:name[], bool:dontBroadcast)
+public Event_Pounce(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new player = GetClientOfUserId(GetEventInt(event, "userid"));
 	new victim = GetClientOfUserId(GetEventInt(event, "victim"));
 	
-	if (player > 0)
+	if (victim > 0)
 	{
-		if (victim > 0)
-		{
-			LogPlyrPlyrEvent(player, victim, "triggered", "pounce", true);
-		}
-		else
-		{
-			LogPlayerEvent(player, "triggered", "pounce", true);
-		}
+		LogPlyrPlyrEvent(player, victim, "triggered", "pounce", true);
+	}
+	else
+	{
+		LogPlayerEvent(player, "triggered", "pounce", true);
 	}
 }
 
 
-public Action:Event_Boomered(Handle:event, const String:name[], bool:dontBroadcast)
+public Event_Boomered(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new player = GetClientOfUserId(GetEventInt(event, "attacker"));
 	new victim = GetClientOfUserId(GetEventInt(event, "userid"));
@@ -414,7 +436,7 @@ public Action:Event_Boomered(Handle:event, const String:name[], bool:dontBroadca
 }
 
 
-public Action:Event_FF(Handle:event, const String:name[], bool:dontBroadcast)
+public Event_FF(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new player = GetClientOfUserId(GetEventInt(event, "attacker"));
 	new victim = GetClientOfUserId(GetEventInt(event, "victim"));
@@ -432,6 +454,71 @@ public Action:Event_FF(Handle:event, const String:name[], bool:dontBroadcast)
 	}
 }
 
+public Event_WitchKilled(Handle:event, const String:name[], bool:dontBroadcast)
+{
+	if (GetEventBool(event, "oneshot"))
+	{
+		LogPlayerEvent(GetClientOfUserId(GetEventInt(event, "userid")), "triggered", "cr0wned", true);
+	}
+}
+
+public Event_Defib(Handle:event, const String:name[], bool:dontBroadcast)
+{
+	LogPlayerEvent(GetClientOfUserId(GetEventInt(event, "userid")), "triggered", "defibrillated_teammate", true);
+}
+
+public Event_Adrenaline(Handle:event, const String:name[], bool:dontBroadcast)
+{
+	LogPlayerEvent(GetClientOfUserId(GetEventInt(event, "userid")), "triggered", "used_adrenaline", true);
+}
+
+public Event_JockeyRide(Handle:event, const String:name[], bool:dontBroadcast)
+{
+	new player = GetClientOfUserId(GetEventInt(event, "userid"));
+	new victim = GetClientOfUserId(GetEventInt(event, "victim"));
+	
+	if (player > 0)
+	{
+		if (victim > 0)
+		{
+			LogPlyrPlyrEvent(player, victim, "triggered", "jockey_ride", true);
+		}
+		else
+		{
+			LogPlayerEvent(player, "triggered", "jockey_ride", true);
+		}
+	}
+}
+
+public Event_ChargerPummelStart(Handle:event, const String:name[], bool:dontBroadcast)
+{
+	new player = GetClientOfUserId(GetEventInt(event, "userid"));
+	new victim = GetClientOfUserId(GetEventInt(event, "victim"));
+	
+	if (victim > 0)
+	{
+		LogPlyrPlyrEvent(player, victim, "triggered", "charger_pummel", true);
+	}
+	else
+	{
+		LogPlayerEvent(player, "triggered", "charger_pummel", true);
+	}
+}
+
+public Event_VomitBombTank(Handle:event, const String:name[], bool:dontBroadcast)
+{
+	LogPlayerEvent(GetClientOfUserId(GetEventInt(event, "userid")), "triggered", "bilebomb_tank", true);
+}
+
+public Event_ScavengeEnd(Handle:event, const String:name[], bool:dontBroadcast)
+{
+	LogTeamEvent(GetEventInt(event, "winners"), "triggered", "Scavenge_Win");
+}
+
+public Event_VersusEnd(Handle:event, const String:name[], bool:dontBroadcast)
+{
+	LogTeamEvent(GetEventInt(event, "winners"), "triggered", "Versus_Win");
+}
 
 public Action:Event_Award(Handle:event, const String:name[], bool:dontBroadcast)
 {
@@ -442,8 +529,6 @@ public Action:Event_Award(Handle:event, const String:name[], bool:dontBroadcast)
 	
 	switch(GetEventInt(event, "award"))
 	{
-		case 19:
-			LogPlayerEvent(GetClientOfUserId(GetEventInt(event, "userid")), "triggered", "cr0wned", true);
 		case 21:
 			LogPlayerEvent(GetClientOfUserId(GetEventInt(event, "userid")), "triggered", "hunter_punter", true);
 		case 27:
