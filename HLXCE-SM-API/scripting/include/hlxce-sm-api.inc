@@ -45,11 +45,11 @@ forward HLXCE_OnGotPlayerData(client, const HLXCE_PlayerData:PData[]);
 
 stock Float:HLXCE_kpd(kills, deaths)
 {
-	return FloatDiv(Float:kills/Float:((deaths==0),1,deaths));
+	return FloatDiv(Float:kills/Float:((deaths==0)?1:deaths));
 }
 
 
 stock Float:HLXCE_accuracy(shots, hits)
 {
-	return FloatDiv(Float:shots/Float:((hits==0),1,hits));
+	return FloatDiv(Float:shots/Float:((hits==0)?1:hits));
 }
