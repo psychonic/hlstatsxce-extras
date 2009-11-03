@@ -25,13 +25,10 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: L4D"
-#define VERSION "1.1-pre2"
+#define VERSION "1.1-pre3"
 
-#define MAX_LOG_WEAPONS 16
-#define IGNORE_SHOTS_START 13
-#define MAX_WEAPON_LEN 14
-
-#define WEAPON_LOG_PREFIX ""
+#define MAX_LOG_WEAPONS 23
+#define MAX_WEAPON_LEN 16
 
 
 new g_weapon_stats[MAXPLAYERS+1][MAX_LOG_WEAPONS][15];
@@ -49,9 +46,16 @@ new const String:g_weapon_list[MAX_LOG_WEAPONS][MAX_WEAPON_LEN] = {
 									"hunter_claw",
 									"smoker_claw",
 									"boomer_claw",
-									"entityflame",
-									"inferno",
-									"world"
+									"smg_silenced",		//l4d2 start 14 [13]
+									"pistol_magnum",
+									"rifle_ak47",
+									"rifle_desert",
+									"shotgun_chrome",
+									"shotgun_spas",
+									"sniper_military",
+									"jockey_claw",
+									"splitter_claw",
+									"charger_claw"
 									};
 								
 new g_weapon_hashes[MAX_LOG_WEAPONS];
@@ -59,10 +63,14 @@ new g_weapon_hashes[MAX_LOG_WEAPONS];
 new Handle:g_cvar_wstats = INVALID_HANDLE;
 new Handle:g_cvar_actions = INVALID_HANDLE;
 new Handle:g_cvar_headshots = INVALID_HANDLE;
+new Handle:g_cvar_meleeoverride = INVALID_HANDLE;
 
 new bool:g_logwstats = true;
 new bool:g_logactions = true;
 new bool:g_logheadshots = false;
+new bool:g_logmeleeoverride = true;
+
+new g_iActiveWeaponOffset;
 
 new bool:g_bIsL4D2;
 
@@ -86,9 +94,11 @@ public OnPluginStart()
 	g_cvar_wstats = CreateConVar("superlogs_wstats", "1", "Enable logging of weapon stats (default on)", 0, true, 0.0, true, 1.0);
 	g_cvar_actions = CreateConVar("superlogs_actions", "1", "Enable logging of player actions, such as \"Got_The_Bomb\" (default on)", 0, true, 0.0, true, 1.0);
 	g_cvar_headshots = CreateConVar("superlogs_headshots", "0", "Enable logging of headshot player action (default off)", 0, true, 0.0, true, 1.0);
+	g_cvar_meleeoverride = CreateConVar("superlogs_meleeoverride", "1", "Enable changing \"melee\" weapon in server logs to specific weapon (L4D2-only) (default on)", 0, true, 0.0, true, 1.0);
 	HookConVarChange(g_cvar_wstats, OnCvarWstatsChange);
 	HookConVarChange(g_cvar_actions, OnCvarActionsChange);
 	HookConVarChange(g_cvar_headshots, OnCvarHeadshotsChange);
+	HookConVarChange(g_cvar_meleeoverride, OnCvarMeleeOverrideChange);
 	CreateConVar("superlogs_l4d_version", VERSION, NAME, FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
 		
 	hook_actions();
@@ -101,11 +111,13 @@ public OnPluginStart()
 	GetTeams();
 	
 	// hacky L4D2 detection
-	static Handle:temp = FindConVar("vomitjar_radius");
+	new Handle:temp = FindConVar("vomitjar_radius");
 	if (temp != INVALID_HANDLE)
 	{
 		g_bIsL4D2 = true;
 	}
+	
+	g_iActiveWeaponOffset = FindSendPropInfo("CTerrorPlayer", "m_hActiveWeapon");
 }
 
 
@@ -190,7 +202,6 @@ public Action:FlushWeaponLogs(Handle:timer, any:index)
 	WstatsDumpAll();
 }
 
-
 public Event_PlayerShoot(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	// "local"         "1"             // don't network this, its way too spammy
@@ -205,13 +216,12 @@ public Event_PlayerShoot(Handle:event, const String:name[], bool:dontBroadcast)
 		decl String: weapon[MAX_WEAPON_LEN];
 		GetEventString(event, "weapon", weapon, sizeof(weapon));
 		new weapon_index = get_weapon_index(weapon);
-		if (weapon_index > -1 && weapon_index < IGNORE_SHOTS_START)
+		if (weapon_index > -1)
 		{
 			g_weapon_stats[attacker][weapon_index][LOG_HIT_SHOTS]++;
 		}
 	}
 }
-
 
 public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 {
@@ -247,7 +257,6 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 	}
 }
 
-
 public Event_InfectedHurt(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	// "local"         "1"             // don't network this, its way too spammy
@@ -278,15 +287,26 @@ public Event_InfectedHurt(Handle:event, const String:name[], bool:dontBroadcast)
 	}
 }
 
-
 public Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontBroadcast)
 {
-	if (GetEventBool(event, "headshot"))
+	new attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
+	
+	if (g_logheadshots && GetEventBool(event, "headshot"))
 	{
-		LogPlayerEvent(GetClientOfUserId(GetEventInt(event, "attacker")), "triggered", "headshot");
+		LogPlayerEvent(attacker, "triggered", "headshot");
+	}
+	if (g_logmeleeoverride && g_bIsL4D2 && attacker > 0 && IsClientInGame(attacker))
+	{
+		decl String:weapon[64];
+		GetEventString(event, "weapon", weapon, sizeof(weapon));
+		if (strncmp(weapon, "melee", 5) == 0)
+		{
+			decl String:newweapon[64];
+			GetEntPropString(GetEntDataEnt2(attacker, g_iActiveWeaponOffset), Prop_Data, "m_strMapSetScriptName", newweapon, sizeof(newweapon));
+			SetEventString(event, "weapon", newweapon);
+		}
 	}
 }
-
 
 public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 {
@@ -332,7 +352,6 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 	}
 }
 
-
 public Event_RoundEnd(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	WstatsDumpAll();
@@ -357,7 +376,6 @@ public Action:LogMap(Handle:timer)
 	return Plugin_Continue;
 }
 
-
 public Event_RescueSurvivor(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new player = GetClientOfUserId(GetEventInt(event, "rescuer"));
@@ -378,7 +396,6 @@ public Event_Heal(Handle:event, const String:name[], bool:dontBroadcast)
 	}
 }
 
-
 public Event_Revive(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new player = GetClientOfUserId(GetEventInt(event, "userid"));
@@ -389,7 +406,6 @@ public Event_Revive(Handle:event, const String:name[], bool:dontBroadcast)
 	}
 }
 
-
 public Event_StartleWitch(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new player = GetClientOfUserId(GetEventInt(event, "userid"));
@@ -399,7 +415,6 @@ public Event_StartleWitch(Handle:event, const String:name[], bool:dontBroadcast)
 			LogPlayerEvent(player, "triggered", "startled_witch", true);
 	}
 }
-
 
 public Event_Pounce(Handle:event, const String:name[], bool:dontBroadcast)
 {
@@ -416,13 +431,12 @@ public Event_Pounce(Handle:event, const String:name[], bool:dontBroadcast)
 	}
 }
 
-
 public Event_Boomered(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new player = GetClientOfUserId(GetEventInt(event, "attacker"));
 	new victim = GetClientOfUserId(GetEventInt(event, "userid"));
 	
-	if (player > 0 && (!b_IsL4D2 || GetEventBool(event, "by_boomer")))
+	if (player > 0 && (!g_bIsL4D2 || GetEventBool(event, "by_boomer")))
 	{
 		if (victim > 0)
 		{
@@ -434,7 +448,6 @@ public Event_Boomered(Handle:event, const String:name[], bool:dontBroadcast)
 		}
 	}
 }
-
 
 public Event_FF(Handle:event, const String:name[], bool:dontBroadcast)
 {
@@ -542,7 +555,6 @@ public Action:Event_Award(Handle:event, const String:name[], bool:dontBroadcast)
 	}
 }
 
-
 public OnCvarWstatsChange(Handle:cvar, const String:oldVal[], const String:newVal[])
 {
 	new bool:old_value = g_logwstats;
@@ -560,7 +572,6 @@ public OnCvarWstatsChange(Handle:cvar, const String:oldVal[], const String:newVa
 		}
 	}
 }
-
 
 public OnCvarActionsChange(Handle:cvar, const String:oldVal[], const String:newVal[])
 {
@@ -580,7 +591,6 @@ public OnCvarActionsChange(Handle:cvar, const String:oldVal[], const String:newV
 	}
 }
 
-
 public OnCvarHeadshotsChange(Handle:cvar, const String:oldVal[], const String:newVal[])
 {
 	new bool:old_value = g_logheadshots;
@@ -588,11 +598,29 @@ public OnCvarHeadshotsChange(Handle:cvar, const String:oldVal[], const String:ne
 	
 	if (old_value != g_logheadshots)
 	{
-		if (g_logheadshots)
+		if (g_logheadshots && !g_logmeleeoverride)
 		{
 			HookEvent("player_death", Event_PlayerDeathPre, EventHookMode_Pre);
 		}
-		else if (!g_logwstats)
+		else if (!g_logmeleeoverride)
+		{
+			UnhookEvent("player_death", Event_PlayerDeathPre, EventHookMode_Pre);
+		}
+	}
+}
+
+public OnCvarMeleeOverrideChange(Handle:cvar, const String:oldVal[], const String:newVal[])
+{
+	new bool:old_value = g_logmeleeoverride;
+	g_logmeleeoverride = GetConVarBool(g_cvar_meleeoverride);
+	
+	if (old_value != g_logmeleeoverride)
+	{
+		if (g_logmeleeoverride && !g_logheadshots)
+		{
+			HookEvent("player_death", Event_PlayerDeathPre, EventHookMode_Pre);
+		}
+		else if (!g_logheadshots)
 		{
 			UnhookEvent("player_death", Event_PlayerDeathPre, EventHookMode_Pre);
 		}

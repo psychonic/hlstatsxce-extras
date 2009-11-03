@@ -27,7 +27,7 @@
 #include <tf2_stocks>
 
 #define NAME "SuperLogs: TF2"
-#define VERSION "1.3.4"
+#define VERSION "1.3.5"
 
 // update fields with //u when adding weapons
 
@@ -195,8 +195,8 @@ public OnPluginStart()
 	
 	GetTeams();
 	
-	g_iHealsOff = FindSendPropOffs("CTFPlayer", "m_iHealPoints");
-	g_iWeaponOff = FindSendPropOffs("CTFPlayer", "m_hActiveWeapon");
+	g_iHealsOff = FindSendPropInfo("CTFPlayer", "m_iHealPoints");
+	g_iWeaponOff = FindSendPropInfo("CTFPlayer", "m_hActiveWeapon");
 	
 	for (new i = 1; i <= MaxClients; i++)
 	{
