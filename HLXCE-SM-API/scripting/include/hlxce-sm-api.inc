@@ -4,7 +4,7 @@ enum HLXCE_PlayerData
 	PData_Kills,
 	PData_Deaths,
 	PData_Headshots,
-	PData_ConnTime,
+	PData_Conntime,
 	PData_Shots,
 	PData_Hits,
 	PData_Rank

@@ -24,19 +24,22 @@
 #include <sourcemod>
  
 #define NAME "HLstatsX:CE API for Sourcemod"
-#define VERSION "0.1"
+#define VERSION "0.2"
  
 #define RANKINGTYPE_SKILL 0
 #define RANKINGTYPE_KILLS 1
 
-#define PLAYERDATA_SKILL 0
-#define PLAYERDATA_KILLS 1
-#define PLAYERDATA_DEATHS 2
-#define PLAYERDATA_HEADSHOTS 3
-#define PLAYERDATA_CONNTIME 4
-#define PLAYERDATA_SHOTS 5
-#define PLAYERDATA_HITS 6
-#define PLAYERDATA_RANK 7
+enum HLXCE_PlayerData
+{
+	PData_Skill,
+	PData_Kills,
+	PData_Deaths,
+	PData_Headshots,
+	PData_Conntime,
+	PData_Shots,
+	PData_Hits,
+	PData_Rank
+}
 
 #define DEBUG 0
  
@@ -59,7 +62,7 @@ new String:g_szHLXGameCode[33];
 new g_iGameCodeLen;
 new String:g_szRankingType[2][] = { "skill", "kills" };
 new g_iRankingType;
-new g_iPlayerCounts[MAXPLAYERS+1][8];
+new HLXCE_PlayerData:g_iPlayerCounts[MAXPLAYERS+1][9];
  
 public OnPluginStart()
 {
@@ -387,14 +390,14 @@ public OnGotPlayerData(Handle:owner, Handle:hndl, const String:error[], any:user
 	SQL_FetchRow(hndl); // there will only be one row because playerId is unique
 	for (new i = 0; i < 7; i++)
 	{
-		g_iPlayerCounts[client][i] = SQL_FetchInt(hndl, i);
+		g_iPlayerCounts[client][i] = HLXCE_PlayerData:SQL_FetchInt(hndl, i);
 		
 		#if DEBUG == 1
 			LogToGame("[HLX-API] %N data %d is %d", client, i, g_iPlayerCounts[client][i]);
 		#endif
 	}
 	
-	new iTempDeaths = g_iPlayerCounts[client][PLAYERDATA_DEATHS];
+	new iTempDeaths = g_iPlayerCounts[client][PData_Deaths];
 	if (iTempDeaths == 0)
 	{
 		iTempDeaths = 1;
@@ -402,7 +405,7 @@ public OnGotPlayerData(Handle:owner, Handle:hndl, const String:error[], any:user
 	
 	new iQSize = 180+g_iGameCodeLen;
 	decl String:szQueryText[iQSize];
-	Format(szQueryText, iQSize, "SELECT COUNT(*) FROM hlstats_Players WHERE game='%s' AND hideranking=0 AND kills>=1 AND((%s>%d)OR((%s=%d)AND(kills/IF(deaths=0,1,deaths)>%.3f)))", g_szHLXGameCode, g_szRankingType[g_iRankingType], g_iPlayerCounts[client][g_iRankingType], g_szRankingType[g_iRankingType], g_iPlayerCounts[client][g_iRankingType], FloatDiv(Float:(g_iPlayerCounts[client][PLAYERDATA_KILLS]),Float:(iTempDeaths)));
+	Format(szQueryText, iQSize, "SELECT COUNT(*) FROM hlstats_Players WHERE game='%s' AND hideranking=0 AND kills>=1 AND((%s>%d)OR((%s=%d)AND(kills/IF(deaths=0,1,deaths)>%.3f)))", g_szHLXGameCode, g_szRankingType[g_iRankingType], g_iPlayerCounts[client][g_iRankingType], g_szRankingType[g_iRankingType], g_iPlayerCounts[client][g_iRankingType], FloatDiv(Float:(g_iPlayerCounts[client][PData_Kills]),Float:(iTempDeaths)));
 	
 	#if DEBUG == 1
 		LogToGame("[HLX-API] Sending query \"%s\"", szQueryText);
@@ -432,10 +435,10 @@ public OnGotPlayerRank(Handle:owner, Handle:hndl, const String:error[], any:user
 	}
 	
 	SQL_FetchRow(hndl);
-	g_iPlayerCounts[client][PLAYERDATA_RANK] = (SQL_FetchInt(hndl, 0) + 1);
+	g_iPlayerCounts[client][PData_Rank] = (SQL_FetchInt(hndl, 0) + 1);
 	
 	#if DEBUG == 1
-		LogToGame("[HLX-API] %N rank is %d", client, g_iPlayerCounts[client][PLAYERDATA_RANK]);
+		LogToGame("[HLX-API] %N rank is %d", client, g_iPlayerCounts[client][PData_Rank]);
 		LogToGame("[HLX-API] Firing HLXCE_OnGotPlayerData Forward %N/%d", client, pid);
 	#endif
 	
