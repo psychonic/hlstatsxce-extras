@@ -26,14 +26,13 @@
 #include <sdktools>
 #include <tf2_stocks>
 
-#define NAME "SuperLogs: TF2"
-#define VERSION "1.3.5"
+#define VERSION "1.3.6"
 
 // update fields with //u when adding weapons
 
 #define TF2
 #define UNLOCKABLE_OFFSET 12
-#define MAX_WEAPON_LEN 26 //u
+#define MAX_WEAPON_LEN 26
 #define PREFIX_LEN 10
 #define SHOOT 1
 #define HIT 2
@@ -49,8 +48,6 @@
 #define SENTRY 3
 #define TELEENT 1
 #define TELEEXIT 2
-
-#define DMG_BURN (1 << 3)
 
 new Handle:g_cvar_actions = INVALID_HANDLE;
 new Handle:g_cvar_teleports = INVALID_HANDLE;
@@ -77,15 +74,7 @@ new bool:g_wstatsnet = true;
 new bool:g_rolelogfix = true;
 new bool:g_objlogfix = true;
 
-new bool:g_tdextavailable;
-
-public Plugin:myinfo = {
-	name = NAME,
-	author = "psychonic",
-	description = "Advanced logging for TF2. Generates auxilary logging for use with log parsers such as HLstatsX and Psychostats",
-	version = VERSION,
-	url = "http://www.hlxcommunity.com"
-};
+new bool:g_sdkhooksavailable;
 
 new g_weapon_stats[MAXPLAYERS+1][MAX_LOG_WEAPONS][7];
 new const String:g_weapon_list[MAX_LOG_WEAPONS][MAX_WEAPON_LEN] = {
@@ -144,7 +133,21 @@ new g_iWeaponOff;
 #include <wstatshelper>
 
 #undef REQUIRE_EXTENSIONS
-#include <takedamage>
+#include <sdkhooks>
+
+#if defined _sdkhooks_included
+	#define NAME "SuperLogs: TF2"
+#else
+	#define NAME "SuperLogs: TF2 (No SDKHooks)"
+#endif
+
+public Plugin:myinfo = {
+	name = NAME,
+	author = "psychonic",
+	description = "Advanced logging for TF2. Generates auxilary logging for use with log parsers such as HLstatsX and Psychostats",
+	version = VERSION,
+	url = "http://www.hlxcommunity.com"
+};
 
 public OnPluginStart()
 {
@@ -212,9 +215,9 @@ public OnPluginStart()
 
 public OnAllPluginsLoaded()
 {
-	if (GetExtensionFileStatus("takedamage.ext") == 1)
+	if (GetExtensionFileStatus("sdkhooks.ext") == 1)
 	{
-		g_tdextavailable = true;
+		g_sdkhooksavailable = true;
 	}
 	else if (g_logwstats && g_crits)
 	{
@@ -302,6 +305,12 @@ public Action:LogHook(const String:message[])
 		return Plugin_Handled;
 	}
 	return Plugin_Continue;
+}
+
+
+public OnClientPutInServer(client)
+{
+	SDKHook(client, SDKHook_OnTakeDamagePost, OnTakeDamage);
 }
 
 
@@ -429,7 +438,7 @@ public Action:TF2_CalcIsAttackCritical(attacker, weapon, String:weaponname[], &b
 	}
 }
 
-public Action:OnTakeDamage(victim, attacker, inflictor, Float:damage, damagetype)
+public OnTakeDamage(victim, attacker, inflictor, Float:damage, damagetype)
 {
 	if (inflictor > 0)
 	{
@@ -443,7 +452,7 @@ public Action:OnTakeDamage(victim, attacker, inflictor, Float:damage, damagetype
 		{
 			if  (damagetype & DMG_BURN)
 			{
-				return Plugin_Continue;
+				return;
 			}
 			// is a player
 			decl String:weapon[MAX_WEAPON_LEN + PREFIX_LEN];
@@ -492,8 +501,6 @@ public Action:OnTakeDamage(victim, attacker, inflictor, Float:damage, damagetype
 			g_weapon_stats[attacker][weapon_index][LOG_HIT_HITS]++;
 		}
 	}
-	
-	return Plugin_Continue;
 }
 
 public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
@@ -866,7 +873,7 @@ WstatsChange()
 		if (g_wstatsnet)
 		{
 			hook_wstats();
-			if (!g_tdextavailable)
+			if (!g_sdkhooksavailable)
 			{
 				HookEvent("player_hurt", Event_PlayerHurt);
 			}
@@ -879,7 +886,7 @@ WstatsChange()
 		{
 			WstatsDumpAll();
 			unhook_wstats();
-			if (!g_tdextavailable)
+			if (!g_sdkhooksavailable)
 			{
 				UnhookEvent("player_hurt", Event_PlayerHurt);
 			}
