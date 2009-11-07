@@ -75,7 +75,7 @@ if ($usesb)
          }
     }
     else {
-	 die('[-] Error retrieving banned players: ' . $con->error);
+		die('[-] Error retrieving banned players: ' . $con->error);
     }
 
 		
@@ -91,7 +91,7 @@ if ($usesb)
         }
     }
     else {
-	die('[-] Error retrieving unbanned players: ' . $con->error);
+		die('[-] Error retrieving unbanned players: ' . $con->error);
     }
 
     $con->close();
@@ -112,29 +112,33 @@ if ($useamx)
     // Get permanent banned players
     $bcnt = 0;
     if ($bans = $con->query("SELECT `player_id` FROM `".AMX_PREFIX."_bans` WHERE `ban_length` = 0")) {
-	    die('[-] Error retrieving banned players: ' . $con->error);
+		while ($banned = $bans->fetch_array(MYSQL_ASSOC)) {
+			if(!in_array($banned["player_id"], $bannedplayers))
+			{
+				$bannedplayers[] = $banned["player_id"];
+				++$bcnt;
+			}
+		}
+	} else {
+		die('[-] Error retrieving banned players: ' . $con->error);
     }
     
-    while ($banned = $bans->fetch_array(MYSQL_ASSOC)) {
-        if(!in_array($banned["player_id"], $bannedplayers))
-        {
-            $bannedplayers[] = $banned["player_id"];
-            ++$bcnt;
-        }
-    }
+
     // Read unbanned players
     $ubcnt = 0;
     if ($unbans = $con->query("SELECT `player_id` FROM `".AMX_PREFIX."_banhistory` WHERE `ban_length` = 0")) {
+		while ($unbanned = $unbans->fetch_array(MYSQL_ASSOC)) {
+			if(!in_array($unbanned["player_id"], $bannedplayers) && !in_array($unbanned["player_id"], $unbannedplayers))
+			{
+				$unbannedplayers[] = $unbanned["player_id"];
+				++$ubcnt;
+			}
+		}		
+	} else {
 		die('[-] Error retrieving unbanned players: ' . $con->error);
 	}
 	
-    while ($unbanned = $unbans->fetch_array(MYSQL_ASSOC)) {
-        if(!in_array($unbanned["player_id"], $bannedplayers) && !in_array($unbanned["player_id"], $unbannedplayers))
-        {
-            $unbannedplayers[] = $unbanned["player_id"];
-            ++$ubcnt;
-        }
-    }
+
     $con->close();
     print("[+] Retrieved ".$bcnt." banned and ".$ubcnt." unbanned players from AMXBans.\n");
 }
@@ -153,29 +157,33 @@ if ($usebm)
     // Get permanent banned players
     $bcnt = 0;
     if ($bans = $con->query("SELECT `steamid` FROM `".BM_PREFIX."_bans` WHERE `Until` IS NULL")) {
-        die('[-] Error retrieving banned players: ' . $con->error);
+		while ($banned = $bans->fetch_array(MYSQL_ASSOC)) {
+			if(!in_array($banned["steamid"], $bannedplayers))
+			{
+				$bannedplayers[] = $banned["steamid"];
+				++$bcnt;
+			}
+		}
+	} else {
+		die('[-] Error retrieving banned players: ' . $con->error);
     }
 	
-    while ($banned = $bans->fetch_array(MYSQL_ASSOC)) {
-        if(!in_array($banned["steamid"], $bannedplayers))
-        {
-            $bannedplayers[] = $banned["steamid"];
-            ++$bcnt;
-        }
-    }
+
     // Read unbanned players
     $ubcnt = 0;
     if ($unbans = $con->query("SELECT `steamid` FROM `".BM_PREFIX."_bans` WHERE `Until` IS NULL AND `Remove` = 0")) {
-        die('[-] Error retrieving unbanned players: ' . $con->error);
+		while ($unbanned = $unbans->fetch_array(MYSQL_ASSOC)) {
+			if(!in_array($unbanned["steamid"], $bannedplayers) && !in_array($unbanned["steamid"], $unbannedplayers))
+			{
+				$unbannedplayers[] = $unbanned["steamid"];
+				++$ubcnt;
+			}
+		}
+	} else {
+		die('[-] Error retrieving unbanned players: ' . $con->error);
     }
 	
-    while ($unbanned = $unbans->fetch_array(MYSQL_ASSOC)) {
-        if(!in_array($unbanned["steamid"], $bannedplayers) && !in_array($unbanned["steamid"], $unbannedplayers))
-        {
-            $unbannedplayers[] = $unbanned["steamid"];
-            ++$ubcnt;
-        }
-    }
+
     $con->close();
     print("[+] Retrieved ".$bcnt." banned and ".$ubcnt." unbanned players from Beetlesmod.\n");
 }
@@ -194,29 +202,33 @@ if ($usegb)
     // Get permanent banned players
     $bcnt = 0;
     if ($bans = $con->query("SELECT `steam_id` FROM `".GB_PREFIX."_ban` WHERE `active` = 1 AND `pending` = 0 AND `length` = 0")) {
-        die('[-] Error retrieving banned players: ' . $con->error);
+		while ($banned = $bans->fetch_array(MYSQL_ASSOC)) {
+			if(!in_array($banned["steam_id"], $bannedplayers))
+			{
+				$bannedplayers[] = $banned["steam_id"];
+				++$bcnt;
+			}
+		}
+	} else {
+		die('[-] Error retrieving banned players: ' . $con->error);
     }
 	
-    while ($banned = $bans->fetch_array(MYSQL_ASSOC)) {
-        if(!in_array($banned["steam_id"], $bannedplayers))
-        {
-            $bannedplayers[] = $banned["steam_id"];
-            ++$bcnt;
-        }
-    }
+
     // Read unbanned players
     $ubcnt = 0;
     if ($unbans = $con->query("SELECT `steam_id` FROM `".GB_PREFIX."_ban` WHERE `active` = 0 AND `pending` = 0 AND `length` = 0")) {
-        die('[-] Error retrieving unbanned players: ' . $con->error);
+		while ($unbanned = $unbans->fetch_array(MYSQL_ASSOC)) {
+			if(!in_array($unbanned["steam_id"], $bannedplayers) && !in_array($unbanned["steam_id"], $unbannedplayers))
+			{
+				$unbannedplayers[] = $unbanned["steam_id"];
+				++$ubcnt;
+			}
+		}
+	} else {
+		die('[-] Error retrieving unbanned players: ' . $con->error);
     }
 	
-    while ($unbanned = $unbans->fetch_array(MYSQL_ASSOC)) {
-        if(!in_array($unbanned["steam_id"], $bannedplayers) && !in_array($unbanned["steam_id"], $unbannedplayers))
-        {
-            $unbannedplayers[] = $unbanned["steam_id"];
-            ++$ubcnt;
-        }
-    }
+
     $con->close();
     print("[+] Retrieved ".$bcnt." banned and ".$ubcnt." unbanned players from Globalban.\n");
 }
@@ -235,30 +247,34 @@ if ($usemb)
     // Get permanent banned players
     $bcnt = 0;
     if ($bans = $con->query("SELECT `steam_id` FROM `".MB_PREFIX."_bans` WHERE `ban_length` = 0")) {
-        die('[-] Error retrieving banned players: ' . $con->error);
+		while ($banned = $bans->fetch_array(MYSQL_ASSOC)) {
+			if(!in_array($banned["steam_id"], $bannedplayers))
+			{
+				$bannedplayers[] = $banned["steam_id"];
+				++$bcnt;
+			}
+		}
+	} else {
+		die('[-] Error retrieving banned players: ' . $con->error);
     }
 	
-    while ($banned = $bans->fetch_array(MYSQL_ASSOC)) {
-        if(!in_array($banned["steam_id"], $bannedplayers))
-        {
-            $bannedplayers[] = $banned["steam_id"];
-            ++$bcnt;
-        }
-    }
+
     /****** SM MySQL Banning doesn't provide a ban history AFAIK ******/
     
     // Read unbanned players
     // $ubcnt = 0;
-    // if ($unbans = $con->query("SELECT `steam_id` FROM `".MB_PREFIX."_bans` WHERE `ban_length` = 0") !== TRUE)
-        // die('[-] Error retrieving unbanned players: ' . $con->error);
-    
-    // while ($unbanned = $unbans->fetch_array(MYSQL_ASSOC)) {
-        // if(!in_array($unbanned["steam_id"], $bannedplayers) && !in_array($unbanned["steam_id"], $unbannedplayers))
-        // {
-            // $unbannedplayers[] = $unbanned["steam_id"];
-            // ++$ubcnt;
-        // }
-    // }
+    // if ($unbans = $con->query("SELECT `steam_id` FROM `".MB_PREFIX."_bans` WHERE `ban_length` = 0")) {
+		// while ($unbanned = $unbans->fetch_array(MYSQL_ASSOC)) {
+			// if(!in_array($unbanned["steam_id"], $bannedplayers) && !in_array($unbanned["steam_id"], $unbannedplayers))
+			// {
+				// $unbannedplayers[] = $unbanned["steam_id"];
+				// ++$ubcnt;
+			// }
+		// }
+	// } else {
+	// die('[-] Error retrieving unbanned players: ' . $con->error);
+    //}
+
     $con->close();
     //print("[+] Retrieved ".$bcnt." banned and ".$ubcnt." unbanned players from MySQL Banning.\n");
     print("[+] Retrieved ".$bcnt." banned players from MySQL Banning.\n");
