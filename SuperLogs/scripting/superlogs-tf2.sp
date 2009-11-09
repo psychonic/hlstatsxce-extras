@@ -26,7 +26,7 @@
 #include <sdktools>
 #include <tf2_stocks>
 
-#define VERSION "1.3.6"
+#define VERSION "1.3.7-"
 
 // update fields with //u when adding weapons
 
@@ -469,6 +469,10 @@ public OnTakeDamage(victim, attacker, inflictor, Float:damage, damagetype)
 			{
 				// is projectile
 				weapon_index = get_weapon_index(weapon, HIT);
+				if (weapon_index == -1)
+				{
+					return;
+				}
 				new owner = GetEntProp(inflictor, Prop_Send, "m_hOwnerEntity");
 				if (owner > -1)
 				{
