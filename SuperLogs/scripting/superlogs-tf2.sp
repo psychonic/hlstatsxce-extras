@@ -26,7 +26,7 @@
 #include <sdktools>
 #include <tf2_stocks>
 
-#define VERSION "1.3.7-"
+#define VERSION "1.4.0"
 
 // update fields with //u when adding weapons
 
@@ -210,11 +210,18 @@ public OnPluginStart()
 	}
 	
 	g_iMaxEntities = GetMaxEntities();
+	
+	// it should be on when plugin starts, but have to check here regardless because of self late load
+	if (GetExtensionFileStatus("sdkhooks.ext") == 1)
+	{
+		g_sdkhooksavailable = true;
+	}
 }
 
 
 public OnAllPluginsLoaded()
 {
+	// definitely loaded by now if plugin started on server startup
 	if (GetExtensionFileStatus("sdkhooks.ext") == 1)
 	{
 		g_sdkhooksavailable = true;
@@ -443,7 +450,6 @@ public OnTakeDamage(victim, attacker, inflictor, Float:damage, damagetype)
 	if (inflictor > 0)
 	{
 		new weapon_index = -1;
-		new bool:tf2proj;
 		new idamage = RoundFloat(damage);
 		new weaponent = -1;
 		
@@ -473,14 +479,17 @@ public OnTakeDamage(victim, attacker, inflictor, Float:damage, damagetype)
 				{
 					return;
 				}
-				new owner = GetEntProp(inflictor, Prop_Send, "m_hOwnerEntity");
-				if (owner > -1)
+				if (strncmp(weapon[14], "pipe", 4) == 0)
 				{
-					weaponent = GetEntDataEnt2(owner, g_iWeaponOff);
+					new owner = GetEntPropEnt(inflictor, Prop_Send, "m_hThrower");
+					if (owner > -1)
+					{
+						weaponent = GetEntDataEnt2(owner, g_iWeaponOff);
+					}
 				}
-				else if (StrContains(weapon, "pipe") != -1)
+				else
 				{
-					owner = GetEntPropEnt(inflictor, Prop_Send, "m_hThrower");
+					new owner = GetEntPropEnt(inflictor, Prop_Send, "m_hOwnerEntity");
 					if (owner > -1)
 					{
 						weaponent = GetEntDataEnt2(owner, g_iWeaponOff);
@@ -496,11 +505,10 @@ public OnTakeDamage(victim, attacker, inflictor, Float:damage, damagetype)
 		}
 		if (weapon_index > -1)
 		{
-			if (!tf2proj && weaponent > -1 && weapon_index >= HASUNLOCKABLE_IDX_START && weapon_index <= HASUNLOCKABLE_IDX_END && GetEntProp(weaponent, Prop_Send, "m_iEntityQuality") > 0)
+			if (weaponent > -1 && weapon_index >= HASUNLOCKABLE_IDX_START && weapon_index <= HASUNLOCKABLE_IDX_END && GetEntProp(weaponent, Prop_Send, "m_iEntityQuality") > 0)
 			{
 				weapon_index += UNLOCKABLE_OFFSET;
 			}
-			//LogToGame("DEBUG: damagetime! MaxClients: %d; attacker: %d; weapon_index: %d", MaxClients, attacker, weapon_index);
 			g_weapon_stats[attacker][weapon_index][LOG_HIT_DAMAGE] += idamage;
 			g_weapon_stats[attacker][weapon_index][LOG_HIT_HITS]++;
 		}
