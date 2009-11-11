@@ -463,7 +463,7 @@ public Action:TF2_CalcIsAttackCritical(attacker, weapon, String:weaponname[], &b
 
 public OnTakeDamage(victim, attacker, inflictor, Float:damage, damagetype)
 {
-	if (inflictor > 0)
+	if(g_wstatsnet && inflictor > 0)
 	{
 		new weapon_index = -1;
 		new idamage = RoundFloat(damage);
