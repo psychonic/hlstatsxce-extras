@@ -210,21 +210,23 @@ public OnPluginStart()
 	}
 	
 	g_iMaxEntities = GetMaxEntities();
-	
-	// it should be on when plugin starts, but have to check here regardless because of self late load
-	if (GetExtensionFileStatus("sdkhooks.ext") == 1)
-	{
-		g_sdkhooksavailable = true;
-	}
 }
 
 
 public OnAllPluginsLoaded()
 {
-	// definitely loaded by now if plugin started on server startup
 	if (GetExtensionFileStatus("sdkhooks.ext") == 1)
 	{
 		g_sdkhooksavailable = true;
+		
+		// hook clients already in game
+		for (new i = 1; i <= MaxClients; i++)
+		{
+			if (IsClientInGame(i))
+			{
+				SDKHook(i, SDKHook_OnTakeDamagePost, OnTakeDamage);
+			}
+		}		
 	}
 	else if (g_logwstats && g_crits)
 	{
@@ -232,6 +234,20 @@ public OnAllPluginsLoaded()
 	}
 }
 
+#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 3
+public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
+#else
+public bool:AskPluginLoad(Handle:myself, bool:late, String:error[], err_max)
+#endif
+{
+	MarkNativeAsOptional("SDKHook");
+	
+#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 3
+	return APLRes_Success;
+#else
+	return true;
+#endif
+}
 
 public OnMapStart()
 {
