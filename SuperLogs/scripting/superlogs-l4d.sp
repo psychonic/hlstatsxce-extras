@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: L4D"
-#define VERSION "1.1-pre3"
+#define VERSION "1.1.0"
 
 #define MAX_LOG_WEAPONS 23
 #define MAX_WEAPON_LEN 16
