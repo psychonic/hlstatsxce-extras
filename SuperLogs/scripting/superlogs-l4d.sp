@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: L4D"
-#define VERSION "1.1.1"
+#define VERSION "1.1.2"
 
 #define MAX_LOG_WEAPONS 27
 #define MAX_WEAPON_LEN 16
@@ -466,7 +466,7 @@ public Event_FF(Handle:event, const String:name[], bool:dontBroadcast)
 	new player = GetClientOfUserId(GetEventInt(event, "attacker"));
 	new victim = GetClientOfUserId(GetEventInt(event, "victim"));
 	
-	if (player == GetClientOfUserId(GetEventInt(event, "guilty") && player > 0))
+	if (player > 0 && player == GetClientOfUserId(GetEventInt(event, "guilty")))
 	{
 		if (victim > 0)
 		{
