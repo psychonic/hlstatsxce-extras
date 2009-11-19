@@ -26,7 +26,7 @@
 #include <sdktools>
 #include <tf2_stocks>
 
-#define VERSION "1.4.0"
+#define VERSION "1.4.1"
 
 // update fields with //u when adding weapons
 
@@ -546,8 +546,9 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 {
 	new attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
 	new victim   = GetClientOfUserId(GetEventInt(event, "userid"));
+	new customkill = GetEventInt(event, "customkill");
 	
-	switch (GetEventInt(event, "customkill"))
+	switch (customkill)
 	{
 		case 1:
 			if (g_logheadshots)
@@ -555,8 +556,17 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 		case 2:
 			if (g_logbackstabs)
 				LogPlyrPlyrEvent(attacker, victim, "triggered", "backstab");
-		case 17, 18:
+	}
+	
+	if (g_logfire && (customkill == 17 || customkill == 18))
+	{
+		decl String:logweapon[64];
+		GetEventString(event, "weapon_logclassname", logweapon, sizeof(logweapon));
+		// Don't override reflected arrows
+		if (logweapon[0] != 'r')
+		{
 			SetEventString(event, "weapon_logclassname", "tf_projectile_arrow_fire");
+		}
 	}
 	return Plugin_Continue;
 }
