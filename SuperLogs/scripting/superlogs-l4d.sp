@@ -25,9 +25,9 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: L4D"
-#define VERSION "1.1.0"
+#define VERSION "1.1.1"
 
-#define MAX_LOG_WEAPONS 23
+#define MAX_LOG_WEAPONS 27
 #define MAX_WEAPON_LEN 16
 
 
@@ -53,6 +53,10 @@ new const String:g_weapon_list[MAX_LOG_WEAPONS][MAX_WEAPON_LEN] = {
 									"shotgun_chrome",
 									"shotgun_spas",
 									"sniper_military",
+									"rifle_sg552",
+									"smg_mp5",
+									"sniper_awp",
+									"sniper_scout",
 									"jockey_claw",
 									"splitter_claw",
 									"charger_claw"
@@ -297,13 +301,21 @@ public Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontBroadcas
 	}
 	if (g_logmeleeoverride && g_bIsL4D2 && attacker > 0 && IsClientInGame(attacker))
 	{
-		decl String:weapon[64];
-		GetEventString(event, "weapon", weapon, sizeof(weapon));
-		if (strncmp(weapon, "melee", 5) == 0)
+		decl String:szWeapon[64];
+		GetEventString(event, "weapon", szWeapon, sizeof(szWeapon));
+		if (strncmp(szWeapon, "melee", 5) == 0)
 		{
-			decl String:newweapon[64];
-			GetEntPropString(GetEntDataEnt2(attacker, g_iActiveWeaponOffset), Prop_Data, "m_strMapSetScriptName", newweapon, sizeof(newweapon));
-			SetEventString(event, "weapon", newweapon);
+			new iWeapon = GetEntDataEnt2(attacker, g_iActiveWeaponOffset);
+			if (IsValidEdict(iWeapon))
+			{
+				// They have time to switch weapons after the kill before the death event
+				GetEdictClassname(iWeapon, szWeapon, sizeof(szWeapon));
+				if (strncmp(szWeapon[7], "melee", 5) == 0)
+				{
+					GetEntPropString(iWeapon, Prop_Data, "m_strMapSetScriptName", szWeapon, sizeof(szWeapon));
+					SetEventString(event, "weapon", szWeapon);
+				}
+			}
 		}
 	}
 }
