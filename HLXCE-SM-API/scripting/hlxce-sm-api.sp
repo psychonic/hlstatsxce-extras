@@ -24,7 +24,7 @@
 #include <sourcemod>
  
 #define NAME "HLstatsX:CE API for Sourcemod"
-#define VERSION "0.2"
+#define VERSION "0.3"
  
 #define RANKINGTYPE_SKILL 0
 #define RANKINGTYPE_KILLS 1
@@ -99,7 +99,10 @@ public bool:AskPluginLoad(Handle:myself, bool:late, String:error[], err_max)
 
 public OnConfigsExecuted()
 {
-	SQL_TConnect(OnConnectedToDatabase, "hlxce");
+	if (g_hHLXDatabase == INVALID_HANDLE)
+	{
+		SQL_TConnect(OnConnectedToDatabase, "hlxce");
+	}
 }
 
 public OnConnectedToDatabase(Handle:owner, Handle:hndl, const String:error[], any:data)
