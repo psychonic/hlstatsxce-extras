@@ -26,7 +26,7 @@
 #include <sdktools>
 #include <tf2_stocks>
 
-#define VERSION "1.4.1"
+#define VERSION "1.4.2"
 
 // update fields with //u when adding weapons
 
@@ -259,6 +259,8 @@ hook_actions()
 {
 	HookEvent("player_stealsandvich", Event_StealSandvich);
 	HookEvent("player_stunned", Event_Stunned);
+	HookEvent("teamplay_win_panel", Event_WinPanel);
+	HookEvent("arena_win_panel", Event_WinPanel);
 	HookUserMessage(GetUserMessageId("PlayerJarated"), Event_Jarated);
 	HookUserMessage(GetUserMessageId("PlayerShieldBlocked"), Event_ShieldBlocked);
 }
@@ -267,6 +269,8 @@ unhook_actions()
 {
 	UnhookEvent("player_stealsandvich", Event_StealSandvich);
 	UnhookEvent("player_stunned", Event_Stunned);
+	UnhookEvent("teamplay_win_panel", Event_WinPanel);
+	UnhookEvent("arena_win_panel", Event_WinPanel);
 	UnhookUserMessage(GetUserMessageId("PlayerJarated"), Event_Jarated);
 	UnhookUserMessage(GetUserMessageId("PlayerShieldBlocked"), Event_ShieldBlocked);
 }
@@ -662,6 +666,13 @@ public Event_Stunned(Handle:event, const String:name[], bool:dontBroadcast)
 	// "big_stun"	"bool"
 		
 	LogPlyrPlyrEvent(GetClientOfUserId(GetEventInt(event, "stunner")), GetClientOfUserId(GetEventInt(event, "victim")), "triggered", "stun", true);
+}
+
+public Event_WinPanel(Handle:event, const String:name[], bool:dontBroadcast)
+{
+	LogPlayerEvent(GetEventInt(event, "player_1"), "triggered", "mvp1");
+	LogPlayerEvent(GetEventInt(event, "player_2"), "triggered", "mvp2");
+	LogPlayerEvent(GetEventInt(event, "player_3"), "triggered", "mvp3");
 }
 
 public Action:Event_Jarated(UserMsg:msg_id, Handle:bf, const players[], playersNum, bool:reliable, bool:init)
