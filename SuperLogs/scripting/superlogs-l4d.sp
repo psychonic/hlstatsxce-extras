@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: L4D"
-#define VERSION "1.1.2"
+#define VERSION "1.1.3"
 
 #define MAX_LOG_WEAPONS 27
 #define MAX_WEAPON_LEN 16
@@ -105,6 +105,13 @@ public OnPluginStart()
 	HookConVarChange(g_cvar_meleeoverride, OnCvarMeleeOverrideChange);
 	CreateConVar("superlogs_l4d_version", VERSION, NAME, FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
 		
+	// hacky L4D2 detection
+	new Handle:temp = FindConVar("vomitjar_radius");
+	if (temp != INVALID_HANDLE)
+	{
+		g_bIsL4D2 = true;
+	}
+		
 	hook_actions();
 	hook_wstats();
 	HookEvent("player_death", Event_PlayerDeathPre, EventHookMode_Pre);
@@ -113,13 +120,6 @@ public OnPluginStart()
 	CreateTimer(1.0, LogMap);
 	
 	GetTeams();
-	
-	// hacky L4D2 detection
-	new Handle:temp = FindConVar("vomitjar_radius");
-	if (temp != INVALID_HANDLE)
-	{
-		g_bIsL4D2 = true;
-	}
 	
 	g_iActiveWeaponOffset = FindSendPropInfo("CTerrorPlayer", "m_hActiveWeapon");
 }
