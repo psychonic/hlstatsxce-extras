@@ -27,7 +27,7 @@
 #include <sdkhooks>
 
 #define NAME "SuperLogs: ZPS"
-#define VERSION "1.0.0"
+#define VERSION "1.0.1"
 
 #define MAX_LOG_WEAPONS 11
 #define MAX_WEAPON_LEN 12
@@ -175,13 +175,14 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 	// "attacker"      "short"         // user ID who killed
 	// "weapon"        "string"        // weapon name killer used 
 	
-	new attacker = GetEventInt(event, "attacker");
+	new attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
+	new victim = GetClientOfUserId(GetEventInt(event, "userid"));
+	
 	if (g_loglocations)
 	{
-		LogKillLoc(GetClientOfUserId(attacker), GetClientOfUserId(GetEventInt(event, "userid")));
+		LogKillLoc(attacker, victim);
 	}
-	if (g_logheadshots
-		&& g_iNextHitgroup[GetClientOfUserId(GetEventInt(event, "userid"))] == HITGROUP_HEAD)
+	if (g_logheadshots && g_iNextHitgroup[victim] == HITGROUP_HEAD)
 	{
 		LogPlayerEvent(attacker, "triggered", "headshot");
 	}
