@@ -26,7 +26,7 @@
 #include <sdktools>
 #include <tf2_stocks>
 
-#define VERSION "1.4.3"
+#define VERSION "1.4.4"
 
 // update fields with //u when adding weapons
 
@@ -262,6 +262,8 @@ hook_actions()
 	HookEvent("teamplay_win_panel", Event_WinPanel);
 	HookEvent("arena_win_panel", Event_WinPanel);
 	HookEvent("player_escort_score", Event_EscortScore);
+	HookEvent("deploy_buff_banner", Event_DeployBuffBanner);
+	HookEvent("medic_defended", Event_MedicDefended);
 	HookUserMessage(GetUserMessageId("PlayerJarated"), Event_Jarated);
 	HookUserMessage(GetUserMessageId("PlayerShieldBlocked"), Event_ShieldBlocked);
 }
@@ -273,6 +275,8 @@ unhook_actions()
 	UnhookEvent("teamplay_win_panel", Event_WinPanel);
 	UnhookEvent("arena_win_panel", Event_WinPanel);
 	UnhookEvent("player_escort_score", Event_EscortScore);
+	UnhookEvent("deploy_buff_banner", Event_DeployBuffBanner);
+	UnhookEvent("medic_defended", Event_MedicDefended);
 	UnhookUserMessage(GetUserMessageId("PlayerJarated"), Event_Jarated);
 	UnhookUserMessage(GetUserMessageId("PlayerShieldBlocked"), Event_ShieldBlocked);
 }
@@ -680,6 +684,15 @@ public Event_WinPanel(Handle:event, const String:name[], bool:dontBroadcast)
 public Event_EscortScore(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	LogPlayerEvent(GetEventInt(event, "player"), "triggered", "escort_score");
+}
+
+public Event_DeployBuffBanner(Handle:event, const String:name[], bool:dontBroadcast)
+{
+	LogPlayerEvent(GetClientOfUserId(GetEventInt(event, "buff_owner")), "triggered", "buff_deployed");
+}
+public Event_MedicDefended(Handle:event, const String:name[], bool:dontBroadcast)
+{
+	LogPlayerEvent(GetClientOfUserId(GetEventInt(event, "userid")), "triggered", "defended_medic");
 }
 
 public Action:Event_Jarated(UserMsg:msg_id, Handle:bf, const players[], playersNum, bool:reliable, bool:init)
