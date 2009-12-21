@@ -52,6 +52,8 @@ SOURCEMOD_DIR=/home/repos/sourcemod/addons/sourcemod/scripting
 # Used to compile AMX plugins
 AMXMODX_DIR=/home/repos/amxmodx/addons/amxmodx/scripting
 
+# Configure where to save completed packages
+OUTPUT_DIR=`pwd`
 
 # NOTHING TO CHANGE BELOW THIS LINE
 # -----------------------------------------------------------------------------
@@ -113,7 +115,7 @@ if [ -d ${RELEASE_DIR} ]; then
 fi
 
 # Remove any old packages to avoid confusion
-rm -f ${PKG_PREFIX}*
+rm -f ${OUTPUT_DIR}/${PKG_PREFIX}*
 
 # Export current trunk to the release directory
 echo -ne "[+] Exporting trunk (${TRUNK_DIR}) SVN to ${RELEASE_DIR}"
@@ -152,11 +154,11 @@ ln -fs ${RELEASE_DIR}/amxmodx/scripting/*.sma ${AMXMODX_DIR}/ > /dev/null
 mkdir ${RELEASE_DIR}/sourcemod/plugins
 mkdir ${RELEASE_DIR}/amxmodx/plugins
 
-echo -ne "[+] Compiling SourceMod Plugin \\n\\n"
+echo -ne "${DIVIDER}\\n\\n[+] Compiling SourceMod Plugin \\n\\n"
 cd ${SOURCEMOD_DIR} 
 for sm_source in hlstats*.sp
 do
-	grep "VERSION \"${VERSION}\"" ${sm_source} 
+	grep "VERSION \"${VERSION}\"" ${sm_source} -q 
 	if [ $? -ne 0 ]; then
 		echo -ne "${DIVIDER}\\n\\n [!] WARNING: Build version number (${VERSION}) was not found in SM Plugin ${sm_source}.\n"
                 echo -ne "     Is this correct?\\n\\n${DIVIDER}\\n\\n"
@@ -165,21 +167,20 @@ do
 	smxfile="`echo ${sm_source} | sed -e 's/\.sp$/.smx/'`"
 	./spcomp ${sm_source} -o${RELEASE_DIR}/sourcemod/plugins/${smxfile} | grep -q Error
 	if [ $? = 0 ]; then
-		echo "[!] WARNING: ${smxfile} DID NOT COMPILE SUCCESSFULLY."
+		echo " [!] WARNING: ${smxfile} DID NOT COMPILE SUCCESSFULLY."
 		exit
 	else
-		echo "[+] ${smxfile} compiled successfully."
+		echo " [+] ${smxfile} compiled successfully."
 	fi
 	echo -ne "\\n"
 done
-echo -ne \\n\\n
-echo -ne "[+] SourceMod plugins compiled \\n\\n"
+echo -ne "[+] SourceMod plugins compiled \\n\\n${DIVIDER}\\n\\n"
 
 echo -ne "[+] Compiling AMXMODX plugins \\n\\n"
 cd ${AMXMODX_DIR}
 for amx_source in hlstatsx_*.sma
 do
-        grep "VERSION \"${VERSION} (HL1)\"" ${amx_source}
+        grep "VERSION \"${VERSION} (HL1)\"" ${amx_source} -q
         if [ $? -ne 0 ]; then
                 echo -ne "${DIVIDER}\\n\\n [!] WARNING: Build version number (${VERSION}) was not found in AMX plugin ${amx_source}.\n"
 		echo -ne "     Is this correct?\\n\\n${DIVIDER}\\n\\n"
@@ -189,9 +190,9 @@ do
 	amxxfile="`echo ${amx_source} | sed -e 's/\.sma$/.amxx/'`"
 	./amxxpc ${amx_source} -o${RELEASE_DIR}/amxmodx/plugins/${amxxfile} | grep -q Done
 	if [ $? -eq 0 ]; then
-		echo "[+] ${amxxfile} compiled successfully"
+		echo " [+] ${amxxfile} compiled successfully"
 	else
-		echo "[!] WARNING: ${amxxfile} DID NOT COMPILE SUCCESSFULLY."
+		echo " [!] WARNING: ${amxxfile} DID NOT COMPILE SUCCESSFULLY."
 		exit
 	fi
 	echo -ne "\\n"
@@ -200,12 +201,12 @@ echo -ne \\n
 echo -ne "[+] AMXMODX plugins compiled \\n\\n${DIVIDER}\\n\\n"
 
 cd ${RELEASE_DIR}
-rm ${CURRENT_DIR}/${PKG_PREFIX}${VERSION}FULL.tgz 2> /dev/null
-rm ${CURRENT_DIR}/${PKG_PREFIX}${VERSION}FULL.zip 2> /dev/null
+rm ${OUTPUT_DIR}/${PKG_PREFIX}${VERSION}FULL.tgz 2> /dev/null
+rm ${OUTPUT_DIR}/${PKG_PREFIX}${VERSION}FULL.zip 2> /dev/null
 echo -ne "[+] Creating FULL ${VERSION} TGZ package\\n\\n"
-tar -pczf ${CURRENT_DIR}/${PKG_PREFIX}${VERSION}FULL.tgz *
+tar -pczf ${OUTPUT_DIR}/${PKG_PREFIX}${VERSION}FULL.tgz *
 echo -ne "[+] Creating FULL ${VERSION} ZIP package\\n\\n"
-zip -r ${CURRENT_DIR}/${PKG_PREFIX}${VERSION}FULL.zip * > /dev/null
+zip -r ${OUTPUT_DIR}/${PKG_PREFIX}${VERSION}FULL.zip * > /dev/null
 echo -ne "[+] FULL packages created!\\n\\n"
 
 if [ "$2" != "" ]; then
@@ -228,9 +229,9 @@ if [ "$2" != "" ]; then
 	echo -ne "[+] Exporting ${TRUNK_DIR} from rev $2 to ${ENDREV}\\n\\n"
 	for i in $(svn diff --summarize -r $2:${ENDREV} ${TRUNK_DIR} | awk '{ print $2 }');
 	do
-		p=$(echo $i | sed -e "s%${TRUNK_DIR}%%");
+		p=$(echo $i | sed -e "s%${TRUNK_DIR}/%%");
 		mkdir -p ${RELEASE_DIR}/$(dirname $p);
-		svn export $i ${RELEASE_DIR}/$p --force > /dev/null;
+		svn export $i ${RELEASE_DIR}/$p --force -q 2> /dev/null;
 	done
 
 	# Remove directories that should not be in the shipped packages
@@ -253,17 +254,17 @@ if [ "$2" != "" ]; then
 	mkdir ${RELEASE_DIR}/sourcemod/plugins
 	mkdir ${RELEASE_DIR}/amxmodx/plugins
 
-	echo -ne "[+] Compiling SourceMod Plugin \\n\\n"
+	echo -ne "${DIVIDER}\\n\\n[+] Compiling SourceMod Plugin \\n\\n"
 	cd ${SOURCEMOD_DIR}
 	for sm_source in hlstats*.sp
 	do
 	        smxfile="`echo ${sm_source} | sed -e 's/\.sp$/.smx/'`"
         	./spcomp ${sm_source} -o${RELEASE_DIR}/sourcemod/plugins/${smxfile} | grep -q Error
 	        if [ $? = 0 ]; then
-	                echo "[!] WARNING: ${smxfile} DID NOT COMPILE SUCCESSFULLY."
+	                echo " [!] WARNING: ${smxfile} DID NOT COMPILE SUCCESSFULLY."
 	                exit
 	        else
-	                echo "[+] ${smxfile} compiled successfully."
+	                echo " [+] ${smxfile} compiled successfully."
 	        fi
 	done
 	echo -ne \\n
@@ -276,9 +277,9 @@ if [ "$2" != "" ]; then
 	        amxxfile="`echo ${amx_source} | sed -e 's/\.sma$/.amxx/'`"
 	        ./amxxpc ${amx_source} -o${RELEASE_DIR}/amxmodx/plugins/${amxxfile} | grep -q Done
 	        if [ $? -eq 0 ]; then
-	                echo "[+] ${amxxfile} compiled successfully"
+	                echo " [+] ${amxxfile} compiled successfully"
 	        else
-	                echo "[!] WARNING: ${amxxfile} DID NOT COMPILE SUCCESSFULLY."
+	                echo " [!] WARNING: ${amxxfile} DID NOT COMPILE SUCCESSFULLY."
 	                exit
 	        fi
 	done
@@ -286,12 +287,12 @@ if [ "$2" != "" ]; then
 	echo -ne "[+] AMXMODX plugins compiled \\n\\n${DIVIDER}\\n\\n"
 	
 	cd ${RELEASE_DIR}
-	rm ${CURRENT_DIR}/${PKG_PREFIX}${VERSION}UPGRADE.tgz 2> /dev/null
-	rm ${CURRENT_DIR}/${PKG_PREFIX}${VERSION}UPGRADE.zip 2> /dev/null
+	rm ${OUTPUT_DIR}/${PKG_PREFIX}${VERSION}UPGRADE.tgz 2> /dev/null
+	rm ${OUTPUT_DIR}/${PKG_PREFIX}${VERSION}UPGRADE.zip 2> /dev/null
 	echo -ne "${DIVIDER}\\n\\n[+] Creating UPGRADE ${VERSION} TGZ package\\n\\n"
-	tar -pczf ${CURRENT_DIR}/${PKG_PREFIX}${VERSION}UPGRADE.tgz *
+	tar -pczf ${OUTPUT_DIR}/${PKG_PREFIX}${VERSION}UPGRADE.tgz *
 	echo -ne "[+] Creating UPGRADE ${VERSION} ZIP package\\n\\n"
-	zip -r ${CURRENT_DIR}/${PKG_PREFIX}${VERSION}UPGRADE.zip * > /dev/null
+	zip -r ${OUTPUT_DIR}/${PKG_PREFIX}${VERSION}UPGRADE.zip * > /dev/null
 	echo -ne "[+] UPGRADE packages created!\\n\\n"
 fi
 
