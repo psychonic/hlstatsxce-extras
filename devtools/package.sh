@@ -41,19 +41,19 @@ PKG_PREFIX=HLXCommunityEdition
 
 # Configure these to the absolute paths of the SVN trunk local copy
 # and the directory were we should package the release.
-TRUNK_DIR=/home/repos/hlxce/trunk
-RELEASE_DIR=/home/repos/hlxce/release
+TRUNK_DIR=/home/hlxmaster/builds/trunk
+RELEASE_DIR=/home/hlxmaster/builds/release
 
 # Configure the absolute path to the Sourcemod Scripting folder
 # Used to compile hlstats.sp
-SOURCEMOD_DIR=/home/repos/sourcemod/addons/sourcemod/scripting
+SOURCEMOD_DIR=/home/hlxmaster/builds/sourcemod/addons/sourcemod/scripting
 
 # Configure the absolute path to the AMXmodX Scripting folder
 # Used to compile AMX plugins
-AMXMODX_DIR=/home/repos/amxmodx/addons/amxmodx/scripting
+AMXMODX_DIR=/home/hlxmaster/builds/amxmodx/addons/amxmodx/scripting
 
 # Configure where to save completed packages
-OUTPUT_DIR=`pwd`
+OUTPUT_DIR=/home/hlxmaster/master.hlxcommunity.com/builds/_releases
 
 # NOTHING TO CHANGE BELOW THIS LINE
 # -----------------------------------------------------------------------------
@@ -114,9 +114,6 @@ if [ -d ${RELEASE_DIR} ]; then
 	rm -Rf ${RELEASE_DIR}
 fi
 
-# Remove any old packages to avoid confusion
-rm -f ${OUTPUT_DIR}/${PKG_PREFIX}*
-
 # Export current trunk to the release directory
 echo -ne "[+] Exporting trunk (${TRUNK_DIR}) SVN to ${RELEASE_DIR}"
 svn export ${TRUNK_DIR} ${RELEASE_DIR} > /dev/null
@@ -129,7 +126,7 @@ if [ $? -ne 0 ]; then
 	sleep 10
 fi
 
-cat ${RELEASE_DIR}/web/updater/*.php | grep "'${VERSION}' * 'version'" -q
+cat ${RELEASE_DIR}/web/updater/*.php | grep "'${VERSION}'" -q
 if [ $? -ne 0 ]; then
 	echo -ne "\\n\\n${DIVIDER}\\n\\n [!] WARNING: Could not locate an updater file that updates the version to ${VERSION}.\n"
 	echo -ne "     Is this correct?\\n\\n${DIVIDER}"
@@ -201,14 +198,14 @@ echo -ne \\n
 echo -ne "[+] AMXMODX plugins compiled \\n\\n${DIVIDER}\\n\\n"
 
 cd ${RELEASE_DIR}
-rm ${OUTPUT_DIR}/${PKG_PREFIX}${VERSION}FULL.tgz 2> /dev/null
+rm ${OUTPUT_DIR}/${PKG_PREFIX}${VERSION}FULL.tar.gz 2> /dev/null
 rm ${OUTPUT_DIR}/${PKG_PREFIX}${VERSION}FULL.zip 2> /dev/null
 echo -ne "[+] Creating FULL ${VERSION} TGZ package\\n\\n"
-tar -pczf ${OUTPUT_DIR}/${PKG_PREFIX}${VERSION}FULL.tgz *
+tar --owner=0 --group=users -czf ${OUTPUT_DIR}/${PKG_PREFIX}${VERSION}FULL.tgz *
 echo -ne "[+] Creating FULL ${VERSION} ZIP package\\n\\n"
 zip -r ${OUTPUT_DIR}/${PKG_PREFIX}${VERSION}FULL.zip * > /dev/null
 echo -ne "[+] FULL packages created!\\n\\n"
-
+cd ${CURRENT_DIR}
 if [ "$2" != "" ]; then
 	if [ "$3" == "" ]; then
 		ENDREV=HEAD
@@ -226,13 +223,15 @@ if [ "$2" != "" ]; then
         svn export ${TRUNK_DIR}/web/updater ${RELEASE_DIR}/web/updater > /dev/null
 	svn export ${TRUNK_DIR}/ ${RELEASE_DIR}/ --force --depth=files > /dev/null
 
+	cd ${TRUNK_DIR}
+
 	echo -ne "[+] Exporting ${TRUNK_DIR} from rev $2 to ${ENDREV}\\n\\n"
-	for i in $(svn diff --summarize -r $2:${ENDREV} ${TRUNK_DIR} | awk '{ print $2 }');
+	for i in $(svn diff --summarize -r $2:${ENDREV} ${TRUNK_DIR} | grep -e ^". " | awk '{ print $2 }');
 	do
 		p=$(echo $i | sed -e "s%${TRUNK_DIR}/%%");
-		mkdir -p ${RELEASE_DIR}/$(dirname $p);
-		svn export $i ${RELEASE_DIR}/$p --force -q 2> /dev/null;
-	done
+		mkdir -p ${RELEASE_DIR}/$(dirname $p); 
+		svn export $i ${RELEASE_DIR}/$p -q;
+	done 
 
 	# Remove directories that should not be in the shipped packages
 	echo -ne "[+] Removing unneeded/unshipable files and folders\\n\\n"
@@ -287,10 +286,10 @@ if [ "$2" != "" ]; then
 	echo -ne "[+] AMXMODX plugins compiled \\n\\n${DIVIDER}\\n\\n"
 	
 	cd ${RELEASE_DIR}
-	rm ${OUTPUT_DIR}/${PKG_PREFIX}${VERSION}UPGRADE.tgz 2> /dev/null
+	rm ${OUTPUT_DIR}/${PKG_PREFIX}${VERSION}UPGRADE.tar.gz 2> /dev/null
 	rm ${OUTPUT_DIR}/${PKG_PREFIX}${VERSION}UPGRADE.zip 2> /dev/null
 	echo -ne "${DIVIDER}\\n\\n[+] Creating UPGRADE ${VERSION} TGZ package\\n\\n"
-	tar -pczf ${OUTPUT_DIR}/${PKG_PREFIX}${VERSION}UPGRADE.tgz *
+	tar --owner=0 --group=users -cvzf ${OUTPUT_DIR}/${PKG_PREFIX}${VERSION}UPGRADE.tgz *
 	echo -ne "[+] Creating UPGRADE ${VERSION} ZIP package\\n\\n"
 	zip -r ${OUTPUT_DIR}/${PKG_PREFIX}${VERSION}UPGRADE.zip * > /dev/null
 	echo -ne "[+] UPGRADE packages created!\\n\\n"
