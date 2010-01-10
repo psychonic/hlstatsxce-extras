@@ -26,7 +26,7 @@
 #include <sdktools>
 #include <tf2_stocks>
 
-#define VERSION "1.4.4"
+#define VERSION "1.4.5"
 
 // update fields with //u when adding weapons
 
@@ -343,7 +343,10 @@ public Action:LogHook(const String:message[])
 
 public OnClientPutInServer(client)
 {
-	SDKHook(client, SDKHook_OnTakeDamagePost, OnTakeDamage);
+	if (g_sdkhooksavailable)
+	{
+		SDKHook(client, SDKHook_OnTakeDamagePost, OnTakeDamage);
+	}
 }
 
 
@@ -612,18 +615,20 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 		{
 			// octo & psychonic     log kills resulting from critical hits, train hits, and drownings
 			new bits = GetEventInt(event,"damagebits");
-			if ((bits & 1048576) && (attacker > 0) && (custom_kill == 0 || custom_kill > 2))
-			{
-				LogPlayerEvent(attacker, "triggered", "crit_kill");
-			}
-			else if (bits & 16384)
+			if (bits & 16384)
 			{
 				LogPlayerEvent(victim, "triggered", "drowned");
 			}
-			
-			if (death_flags & 16)
+			else if (attacker != victim)
 			{
-				LogPlayerEvent(attacker, "triggered", "first_blood");
+				if ((bits & 1048576) && (attacker > 0) && (custom_kill == 0 || custom_kill > 2))
+				{
+					LogPlayerEvent(attacker, "triggered", "crit_kill");
+				}
+				else if (death_flags & 16)
+				{
+					LogPlayerEvent(attacker, "triggered", "first_blood");
+				}
 			}
 		}
 		if (g_wstatsnet)

@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: L4D"
-#define VERSION "1.1.3"
+#define VERSION "1.2"
 
 #define MAX_LOG_WEAPONS 27
 #define MAX_WEAPON_LEN 16
@@ -90,6 +90,33 @@ public Plugin:myinfo = {
 	url = "http://www.hlxcommunity.com"
 };
 
+#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 3
+public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
+#else
+public bool:AskPluginLoad(Handle:myself, bool:late, String:error[], err_max)
+#endif
+{
+	new String: game_description[64];
+	GetGameDescription(game_description, 64, true);
+	if (strncmp(game_description, "L4D", 3, false) != 0 && StrContains(game_description, "Left 4 D", false) == -1)
+	{
+		new String: game_folder[64];
+		GetGameFolderName(game_folder, 64);
+		if (StrContains(game_folder, "left4dead", false) == -1)
+		{
+			#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 3
+				return APLRes_Failure;
+			#else
+				return false;
+			#endif
+		}
+	}
+#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 3
+	return APLRes_Success;
+#else
+	return true;
+#endif
+}
 
 public OnPluginStart()
 {
@@ -105,9 +132,7 @@ public OnPluginStart()
 	HookConVarChange(g_cvar_meleeoverride, OnCvarMeleeOverrideChange);
 	CreateConVar("superlogs_l4d_version", VERSION, NAME, FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
 		
-	// hacky L4D2 detection
-	new Handle:temp = FindConVar("vomitjar_radius");
-	if (temp != INVALID_HANDLE)
+	if (GuessSDKVersion() >= SOURCE_SDK_LEFT4DEAD2)
 	{
 		g_bIsL4D2 = true;
 	}
