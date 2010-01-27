@@ -96,13 +96,13 @@ public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
 public bool:AskPluginLoad(Handle:myself, bool:late, String:error[], err_max)
 #endif
 {
-	new String: game_description[64];
-	GetGameDescription(game_description, 64, true);
-	if (strncmp(game_description, "L4D", 3, false) != 0 && StrContains(game_description, "Left 4 D", false) == -1)
+	new String:szGameDesc[64];
+	GetGameDescription(szGameDesc, sizeof(szGameDesc), true);
+	if (strncmp(szGameDesc, "L4D", 3, false) != 0 && StrContains(szGameDesc, "Left 4 D", false) == -1)
 	{
-		new String: game_folder[64];
-		GetGameFolderName(game_folder, 64);
-		if (StrContains(game_folder, "left4dead", false) == -1)
+		new String:szGameDir[64];
+		GetGameFolderName(szGameDir, sizeof(szGameDir));
+		if (StrContains(szGameDir, "left4dead", false) == -1)
 		{
 			#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 3
 				return APLRes_Failure;
@@ -132,7 +132,7 @@ public OnPluginStart()
 	HookConVarChange(g_cvar_meleeoverride, OnCvarMeleeOverrideChange);
 	CreateConVar("superlogs_l4d_version", VERSION, NAME, FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
 		
-	if (GuessSDKVersion() >= SOURCE_SDK_LEFT4DEAD2)
+	if (GuessSDKVersion() != SOURCE_SDK_LEFT4DEAD)
 	{
 		g_bIsL4D2 = true;
 	}
