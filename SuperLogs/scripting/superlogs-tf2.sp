@@ -49,6 +49,10 @@
 #define TELEENT 1
 #define TELEEXIT 2
 
+#define WEAPONID_MEDICSAW 11
+#define WEAPONID_ROCKET 22
+#define WEAPONID_DIRECTHIT 64
+
 new Handle:g_cvar_actions = INVALID_HANDLE;
 new Handle:g_cvar_teleports = INVALID_HANDLE;
 new Handle:g_cvar_headshots = INVALID_HANDLE;
@@ -128,6 +132,7 @@ new g_iBuildingCount[MAXPLAYERS+1][4];
 new g_iMaxEntities;
 new g_iHealsOff;
 new g_iWeaponOff;
+new bool:g_bNextKillUbersawTaunt[MAXPLAYERS+1];
 
 #include <loghelper>
 #include <wstatshelper>
@@ -177,6 +182,7 @@ public OnPluginStart()
 	hook_actions();
 	hook_rolefix();
 	hook_objfix();
+	HookEvent("player_hurt", Event_PlayerHurt);
 	HookEvent("player_death", Event_PlayerDeathPre, EventHookMode_Pre);
 	HookEvent("player_death", Event_PlayerDeath);
 	HookEvent("player_teleported", Event_Teleport);
@@ -240,6 +246,23 @@ public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
 public bool:AskPluginLoad(Handle:myself, bool:late, String:error[], err_max)
 #endif
 {
+	new String:szGameDesc[64];
+	GetGameDescription(szGameDesc, sizeof(szGameDesc), true);
+	if (StrContains(szGameDesc, "Team Fortress", false) == -1)
+	{
+		new String:szGameDir[64];
+		GetGameFolderName(szGameDir, sizeof(szGameDir));
+		if (StrContains(szGameDir, "tf", false) == -1)
+		{
+			strcopy(error, err_max, "This plugin is only supported on TF2");
+			#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 3
+				return APLRes_Failure;
+			#else
+				return false;
+			#endif
+		}
+	}
+	
 	MarkNativeAsOptional("SDKHook");
 	
 #if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 3
@@ -343,6 +366,7 @@ public Action:LogHook(const String:message[])
 
 public OnClientPutInServer(client)
 {
+	g_bNextKillUbersawTaunt[client] = false;
 	if (g_sdkhooksavailable)
 	{
 		SDKHook(client, SDKHook_OnTakeDamagePost, OnTakeDamage);
@@ -548,11 +572,43 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
 	
-	if (g_nexthurt[attacker] > -1)
+	if (!g_sdkhooksavailable)
 	{
-		g_weapon_stats[attacker][g_nexthurt[attacker]][LOG_HIT_HITS]++;
+		if (g_nexthurt[attacker] > -1)
+		{
+			g_weapon_stats[attacker][g_nexthurt[attacker]][LOG_HIT_HITS]++;
+		}
+		g_nexthurt[attacker] = -1;
 	}
-	g_nexthurt[attacker] = -1;
+	
+	if (g_logactions)
+	{
+		new victim = GetClientOfUserId(GetEventInt(event, "userid"));
+		if (victim > 0 && victim <= MaxClients && IsClientInGame(victim)
+			&& (GetEntityFlags(victim) & FL_ONGROUND) != FL_ONGROUND
+			)
+		{
+			switch (GetEventInt(event, "weaponid"))
+			{
+				case WEAPONID_ROCKET:
+					LogRocketAirshot(attacker);
+				case WEAPONID_DIRECTHIT:
+					LogRocketAirshot(attacker);
+			}
+		}
+	}
+	
+	if (GetEventInt(event, "weaponid") == WEAPONID_MEDICSAW
+		&& GetEventInt(event, "damageamount") >= 400
+		)
+	{
+		g_bNextKillUbersawTaunt[attacker] = true;
+	}
+}
+
+LogRocketAirshot(attacker)
+{
+	LogPlayerEvent(attacker, "triggered", "airshot_rocket");
 }
 
 public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontBroadcast)
@@ -569,6 +625,15 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 		case 2:
 			if (g_logbackstabs)
 				LogPlyrPlyrEvent(attacker, victim, "triggered", "backstab");
+	}
+	
+	if (g_bNextKillUbersawTaunt[attacker])
+	{
+		if (GetEventInt(event, "weaponid") == WEAPONID_MEDICSAW)
+		{
+			SetEventString(event, "weapon_logclassname", "taunt_medic");
+		}
+		g_bNextKillUbersawTaunt[attacker] = false;
 	}
 	
 	if (g_logfire && (customkill == 17 || customkill == 18))
@@ -628,6 +693,13 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 				else if (death_flags & 16)
 				{
 					LogPlayerEvent(attacker, "triggered", "first_blood");
+				}
+				if (custom_kill == 1
+					&& victim > 0 && victim <= MaxClients && IsClientInGame(victim)
+					&& (GetEntityFlags(victim) & FL_ONGROUND) != FL_ONGROUND
+					)
+				{
+					LogPlayerEvent(attacker, "triggered", "airshot_headshot");
 				}
 			}
 		}
@@ -839,6 +911,10 @@ public OnCvarActionsChange(Handle:cvar, const String:oldVal[], const String:newV
 			{
 				HookEvent("player_death", Event_PlayerDeath);
 			}
+			if (g_sdkhooksavailable)
+			{
+				HookEvent("player_hurt", Event_PlayerHurt);
+			}
 		}
 		else
 		{
@@ -846,6 +922,10 @@ public OnCvarActionsChange(Handle:cvar, const String:oldVal[], const String:newV
 			if (!g_wstatsnet && !g_logheals)
 			{
 				UnhookEvent("player_death", Event_PlayerDeath);
+			}
+			if (g_sdkhooksavailable)
+			{
+				UnhookEvent("player_hurt", Event_PlayerHurt);
 			}
 		}
 	}
@@ -947,7 +1027,7 @@ WstatsChange()
 		if (g_wstatsnet)
 		{
 			hook_wstats();
-			if (!g_sdkhooksavailable)
+			if (!g_sdkhooksavailable && !g_logactions)
 			{
 				HookEvent("player_hurt", Event_PlayerHurt);
 			}
@@ -960,7 +1040,7 @@ WstatsChange()
 		{
 			WstatsDumpAll();
 			unhook_wstats();
-			if (!g_sdkhooksavailable)
+			if (!g_sdkhooksavailable && !g_logactions)
 			{
 				UnhookEvent("player_hurt", Event_PlayerHurt);
 			}

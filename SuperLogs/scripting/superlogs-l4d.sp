@@ -104,6 +104,7 @@ public bool:AskPluginLoad(Handle:myself, bool:late, String:error[], err_max)
 		GetGameFolderName(szGameDir, sizeof(szGameDir));
 		if (StrContains(szGameDir, "left4dead", false) == -1)
 		{
+			strcopy(error, err_max, "This plugin is only supported on L4D & L4D2");
 			#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 3
 				return APLRes_Failure;
 			#else

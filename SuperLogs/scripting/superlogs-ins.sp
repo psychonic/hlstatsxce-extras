@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: Insurgency"
-#define VERSION "1.0.2"
+#define VERSION "1.0.3"
 
 #define MAX_LOG_WEAPONS 19
 #define MAX_WEAPON_LEN 8
@@ -65,6 +65,7 @@ new Handle:g_cvar_headshots = INVALID_HANDLE;
 new Handle:g_cvar_chat = INVALID_HANDLE;
 new Handle:g_cvar_captures = INVALID_HANDLE;
 new Handle:g_cvar_locations = INVALID_HANDLE;
+new Handle:g_cvar_ktraj = INVALID_HANDLE;
 
 new bool:g_logwstats = true;
 new bool:g_logheadshots = true;
@@ -72,8 +73,10 @@ new bool:g_logactions = true;
 new bool:g_logchat = true;
 new bool:g_logcaptures = true;
 new bool:g_loglocations = true;
+new bool:g_logktraj = false;
 
 new g_client_last_weapon[MAXPLAYERS+1] = {-1, ...};
+new String:g_client_last_weaponstring[MAXPLAYERS+1][64];
 
 #include <loghelper>
 #include <wstatshelper>
@@ -87,6 +90,33 @@ public Plugin:myinfo = {
 	url = "http://www.hlxcommunity.com"
 };
 
+#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 3
+public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
+#else
+public bool:AskPluginLoad(Handle:myself, bool:late, String:error[], err_max)
+#endif
+{
+	decl String:game_description[64];
+	GetGameDescription(game_description, sizeof(game_description), true);
+	if (StrContains(game_description, "Insurgency", false) == -1)
+	{
+		decl String:game_folder[64];
+		GetGameFolderName(game_folder, sizeof(game_folder));
+		if (StrContains(game_folder, "insurgency", false) == -1)
+		{
+			#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 3
+				return APLRes_Failure;
+			#else
+				return false;
+			#endif
+		}
+	}
+#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 3
+	return APLRes_Success;
+#else
+	return true;
+#endif
+}
 
 public OnPluginStart()
 {
@@ -98,12 +128,14 @@ public OnPluginStart()
 	g_cvar_chat = CreateConVar("superlogs_chat", "1", "Enable logging of chat (default on)", 0, true, 0.0, true, 1.0);
 	g_cvar_captures = CreateConVar("superlogs_captures", "1", "Enable logging of capturing objectives (default on)", 0, true, 0.0, true, 1.0);
 	g_cvar_locations = CreateConVar("superlogs_locations", "1", "Enable logging of location on player death (default on)", 0, true, 0.0, true, 1.0);
+	g_cvar_ktraj = CreateConVar("superlogs_ktraj", "0", "Enable Psychostats \"KTRAJ\" logging (default off)", 0, true, 0.0, true, 1.0);
 	HookConVarChange(g_cvar_wstats, OnCvarWstatsChange);
 	HookConVarChange(g_cvar_actions, OnCvarActionsChange);
 	HookConVarChange(g_cvar_headshots, OnCvarHeadshotsChange);
 	HookConVarChange(g_cvar_chat, OnCvarChatChange);
 	HookConVarChange(g_cvar_captures, OnCvarCapturesChange);
 	HookConVarChange(g_cvar_locations, OnCvarLocationsChange);
+	HookConVarChange(g_cvar_ktraj, OnCvarKtrajChange);
 	CreateConVar("superlogs_ins_version", VERSION, NAME, FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
 		
 	hook_wstats();
@@ -111,6 +143,7 @@ public OnPluginStart()
 	HookEvent("player_hurt", Event_PlayerHurt);
 	HookEvent("round_end", Event_RoundEnd);
 	HookEvent("player_death", Event_PlayerDeathPre, EventHookMode_Pre);
+	HookEvent("player_death", Event_PlayerDeath);
 	
 	RegConsoleCmd("say2", Command_Chat);
 		
@@ -128,13 +161,11 @@ public OnMapStart()
 
 hook_wstats()
 {
-	HookEvent("player_death", Event_PlayerDeath);
 	HookEvent("player_spawn", Event_PlayerSpawn);
 }
 
 unhook_wstats()
 {
-	UnhookEvent("player_death", Event_PlayerDeath);
 	UnhookEvent("player_spawn", Event_PlayerSpawn);
 }
 
@@ -148,11 +179,13 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 	//  "weapon"		"string"		// Weapon name, like WEAPON_AK47
 
 	new attacker  = GetEventInt(event, "attacker");
-	new hitgroup  = GetEventInt(event, "hitgroup");
+	new victim = GetEventInt(event, "userid");
 
-	if (g_logwstats)
+	if (attacker > 0 && attacker != victim)
 	{
-		if (attacker > 0)
+		attacker = GetClientOfUserId(attacker);
+		new hitgroup  = GetEventInt(event, "hitgroup");
+		if (g_logwstats)
 		{
 			decl String:weapon[MAX_WEAPON_LEN+PREFIX_LEN];
 			GetEventString(event, "weapon", weapon, sizeof(weapon));
@@ -174,13 +207,14 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 					g_weapon_stats[attacker][weapon_index][LOG_HIT_HEADSHOTS]++;
 				}
 				g_client_last_weapon[attacker] = weapon_index;
+				g_client_last_weaponstring[attacker] = weapon;
 			}
 		}
-	}
 	
-	if (g_logheadshots && hitgroup == HITGROUP_HEAD)
-	{
-		LogPlayerEvent(attacker, "triggered", "headshot");
+		if (g_logheadshots && hitgroup == HITGROUP_HEAD)
+		{
+			LogPlayerEvent(attacker, "triggered", "headshot");
+		}
 	}
 }
 
@@ -193,14 +227,14 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 
 public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 {
-	//  "userid"	"short"   	// user ID who died				
+	//  "userid"	"short"   	// user ID who died
 	//  "attacker"	"short"	 	// user ID who killed
 	//  "type"		"byte"		// type of death
 	//  "nodeath"	"bool"		// true if death messages were off when player died
 
 	new victim   = GetClientOfUserId(GetEventInt(event, "userid"));
 	new attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
-	if ((victim > 0) && (attacker > 0))
+	if (g_logwstats && victim > 0 && attacker > 0)
 	{
 		new weapon_index = g_client_last_weapon[attacker];
 		if (weapon_index > -1)
@@ -213,6 +247,10 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 			}
 			dump_player_stats(victim);
 		}
+	}
+	if (g_logktraj)
+	{
+		LogPSKillTraj(attacker, victim, g_client_last_weaponstring[attacker]);
 	}
 }
 
@@ -327,6 +365,10 @@ public OnCvarWstatsChange(Handle:cvar, const String:oldVal[], const String:newVa
 			{
 				HookEvent("round_end", Event_RoundEnd);
 			}
+			if (!g_logktraj)
+			{
+				HookEvent("player_death", Event_PlayerDeath);
+			}
 		}
 		else
 		{
@@ -338,6 +380,10 @@ public OnCvarWstatsChange(Handle:cvar, const String:oldVal[], const String:newVa
 			if (!g_logactions)
 			{
 				UnhookEvent("round_end", Event_RoundEnd);
+			}
+			if (!g_logktraj)
+			{
+				UnhookEvent("player_death", Event_PlayerDeath);
 			}
 		}
 	}
@@ -420,6 +466,24 @@ public OnCvarLocationsChange(Handle:cvar, const String:oldVal[], const String:ne
 		else
 		{
 			UnhookEvent("player_death", Event_PlayerDeathPre, EventHookMode_Pre);
+		}
+	}
+}
+
+public OnCvarKtrajChange(Handle:cvar, const String:oldVal[], const String:newVal[])
+{
+	new bool:old_value = g_logktraj;
+	g_logktraj = GetConVarBool(g_cvar_ktraj);
+	
+	if (old_value != g_logktraj)
+	{
+		if (g_logktraj && !g_logwstats)
+		{
+			HookEvent("player_death", Event_PlayerDeath);
+		}
+		else if (!g_logwstats)
+		{
+			UnhookEvent("player_death", Event_PlayerDeath);
 		}
 	}
 }
