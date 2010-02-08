@@ -26,7 +26,7 @@
 #include <sdktools>
 #include <tf2_stocks>
 
-#define VERSION "1.4.5"
+#define VERSION "1.4.6"
 
 // update fields with //u when adding weapons
 
