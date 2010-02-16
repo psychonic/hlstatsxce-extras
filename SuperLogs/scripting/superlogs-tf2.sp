@@ -587,7 +587,7 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 		if (victim > 0 && victim <= MaxClients
 			&& victim != attacker
 			&& IsClientInGame(victim)
-			&& (GetEntityFlags(victim) & (FL_ONGROUND | FL_INWATER) == 0
+			&& (GetEntityFlags(victim) & (FL_ONGROUND | FL_INWATER)) == 0
 			)
 		{
 			switch (GetEventInt(event, "weaponid"))
@@ -698,7 +698,7 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 				}
 				if (custom_kill == 1
 					&& victim > 0 && victim <= MaxClients && IsClientInGame(victim)
-					&& (GetEntityFlags(victim) & (FL_ONGROUND | FL_INWATER) == 0
+					&& (GetEntityFlags(victim) & (FL_ONGROUND | FL_INWATER)) == 0
 					)
 				{
 					LogPlayerEvent(attacker, "triggered", "airshot_headshot");
