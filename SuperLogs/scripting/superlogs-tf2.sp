@@ -26,7 +26,7 @@
 #include <sdktools>
 #include <tf2_stocks>
 
-#define VERSION "1.4.6"
+#define VERSION "1.4.7"
 
 // update fields with //u when adding weapons
 
@@ -584,8 +584,10 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 	if (g_logactions)
 	{
 		new victim = GetClientOfUserId(GetEventInt(event, "userid"));
-		if (victim > 0 && victim <= MaxClients && IsClientInGame(victim)
-			&& (GetEntityFlags(victim) & FL_ONGROUND) != FL_ONGROUND
+		if (victim > 0 && victim <= MaxClients
+			&& victim != attacker
+			&& IsClientInGame(victim)
+			&& (GetEntityFlags(victim) & (FL_ONGROUND | FL_INWATER) == 0
 			)
 		{
 			switch (GetEventInt(event, "weaponid"))
@@ -696,7 +698,7 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 				}
 				if (custom_kill == 1
 					&& victim > 0 && victim <= MaxClients && IsClientInGame(victim)
-					&& (GetEntityFlags(victim) & FL_ONGROUND) != FL_ONGROUND
+					&& (GetEntityFlags(victim) & (FL_ONGROUND | FL_INWATER) == 0
 					)
 				{
 					LogPlayerEvent(attacker, "triggered", "airshot_headshot");
