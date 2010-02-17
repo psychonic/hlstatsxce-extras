@@ -23,30 +23,25 @@
  
 #include <sourcemod>
 #include <sdktools>
-
 #include <sdkhooks>
 
-#define NAME "SuperLogs: ZPS"
-#define VERSION "1.0.2"
+#define NAME "SuperLogs: HL2MP"
+#define VERSION "1.0.0"
 
-#define MAX_LOG_WEAPONS 11
-#define MAX_WEAPON_LEN 12
+#define MAX_LOG_WEAPONS 6
+#define MAX_WEAPON_LEN 14
 #define PREFIX_LEN 7
+#define CROSSBOW 0
 
 
 new g_weapon_stats[MAXPLAYERS+1][MAX_LOG_WEAPONS][15];
 new const String:g_weapon_list[MAX_LOG_WEAPONS][MAX_WEAPON_LEN] = { 
-									"870",
-									"revolver",
-									"ak47",
-									"usp",
-									"glock18c",
-									"glock",
-									"mp5",
-									"m4",
-									"supershorty",
-									"winchester",
-									"ppk"
+									"crossbow_bolt",
+									"pistol",
+									"357",
+									"smg1",
+									"ar2",
+									"shotgun"
 								};
 								
 new g_weapon_hashes[MAX_LOG_WEAPONS];
@@ -54,12 +49,18 @@ new g_weapon_hashes[MAX_LOG_WEAPONS];
 new Handle:g_cvar_headshots = INVALID_HANDLE;
 new Handle:g_cvar_locations = INVALID_HANDLE;
 new Handle:g_cvar_ktraj = INVALID_HANDLE;
+new Handle:g_cvar_teamplay = INVALID_HANDLE;
 
 new bool:g_logheadshots = true;
 new bool:g_loglocations = true;
 new bool:g_logktraj = true;
 
 new g_iNextHitgroup[MAXPLAYERS+1];
+new g_iNextBowHitgroup[MAXPLAYERS+1];
+
+new g_bTeamPlay;
+
+new g_iCrossBowOwnerOffs = -1;
 
 #include <loghelper>
 #include <wstatshelper>
@@ -68,7 +69,7 @@ new g_iNextHitgroup[MAXPLAYERS+1];
 public Plugin:myinfo = {
 	name = NAME,
 	author = "psychonic",
-	description = "Advanced logging for ZPS. Generates auxilary logging for use with log parsers such as HLstatsX and Psychostats",
+	description = "Advanced logging for HL2MP. Generates auxilary logging for use with log parsers such as HLstatsX and Psychostats",
 	version = VERSION,
 	url = "http://www.hlxcommunity.com"
 };
@@ -81,13 +82,13 @@ public bool:AskPluginLoad(Handle:myself, bool:late, String:error[], err_max)
 {
 	new String:szGameDesc[64];
 	GetGameDescription(szGameDesc, sizeof(szGameDesc), true);
-	if (StrContains(szGameDesc, "ZPS", false) == -1)
+	if (StrContains(szGameDesc, "Half-Life 2 Deathmatch", false) == -1)
 	{
 		new String:szGameDir[64];
 		GetGameFolderName(szGameDir, sizeof(szGameDir));
-		if (StrContains(szGameDir, "zps", false) == -1)
+		if (StrContains(szGameDir, "hl2mp", false) == -1)
 		{
-			strcopy(error, err_max, "This plugin is only supported on Zombie Panic: Source");
+			strcopy(error, err_max, "This plugin is only supported on HL2MP");
 			#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 3
 				return APLRes_Failure;
 			#else
@@ -102,7 +103,6 @@ public bool:AskPluginLoad(Handle:myself, bool:late, String:error[], err_max)
 #endif
 }
 
-
 public OnPluginStart()
 {
 	CalcInitialHashes();
@@ -113,7 +113,9 @@ public OnPluginStart()
 	HookConVarChange(g_cvar_headshots, OnCvarHeadshotsChange);
 	HookConVarChange(g_cvar_locations, OnCvarLocationsChange);
 	HookConVarChange(g_cvar_ktraj, OnCvarKtrajChange);
-	CreateConVar("superlogs_zps_version", VERSION, NAME, FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
+	CreateConVar("superlogs_hl2mp_version", VERSION, NAME, FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
+	
+	g_iCrossBowOwnerOffs = FindSendPropInfo("CCrossbowBolt", "m_hOwnerEntity");
 		
 	HookEvent("player_death", Event_PlayerDeathPre, EventHookMode_Pre);
 	HookEvent("player_death", Event_PlayerDeath);
@@ -121,13 +123,20 @@ public OnPluginStart()
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 		
 	CreateTimer(1.0, LogMap);
+	
+	g_cvar_teamplay = FindConVar("mp_teamplay");
+	if (g_cvar_teamplay != INVALID_HANDLE)
+	{
+		g_bTeamPlay = GetConVarBool(g_cvar_teamplay);
+		HookConVarChange(g_cvar_teamplay, OnTeamPlayChange);
+	}
 }
 
 public OnAllPluginsLoaded()
 {
 	if (GetExtensionFileStatus("sdkhooks.ext") != 1)
 	{
-		SetFailState("SDK Hooks v1.3 or higher is required for SuperLogs: ZPS");
+		SetFailState("SDK Hooks v1.3 or higher is required for SuperLogs: HL2MP");
 	}
 	for (new i = 1; i <= MaxClients; i++)
 	{
@@ -152,6 +161,26 @@ public OnClientPutInServer(client)
 	SDKHook(client, SDKHook_OnTakeDamagePost, OnTakeDamage);
 }
 
+public OnEntityCreated(entity, const String:classname[])
+{
+	if (strcmp(classname, "crossbow_bolt") == 0)
+	{
+		CreateTimer(0.1, CrossbowShot, entity, TIMER_FLAG_NO_MAPCHANGE);
+	}
+}
+
+public Action:CrossbowShot(Handle:timer, any:bowent)
+{
+	if (IsValidEntity(bowent))
+	{
+		new owner = GetEntDataEnt2(bowent, g_iCrossBowOwnerOffs);
+		if (owner > 0 && owner <= MaxClients)
+		{
+			g_weapon_stats[owner][CROSSBOW][LOG_HIT_SHOTS]++;
+		}
+	}
+}
+
 public OnFireBullets(attacker, shots, String:weaponname[])
 {
 	if (attacker > 0 && attacker <= MaxClients)
@@ -168,6 +197,15 @@ public OnTraceAttack(victim, attacker, inflictor, Float:damage, damagetype, ammo
 {
 	if (hitgroup > 0 && attacker > 0 && attacker <= MaxClients && victim > 0 && victim <= MaxClients)
 	{
+		if (IsValidEntity(inflictor))
+		{
+			decl String:inflictorclsname[64];
+			if (GetEntityNetClass(inflictor, inflictorclsname, sizeof(inflictorclsname)) && strcmp(inflictorclsname, "CCrossbowBolt") == 0)
+			{
+				g_iNextBowHitgroup[victim] = hitgroup;
+				return;
+			}
+		}
 		g_iNextHitgroup[victim] = hitgroup;
 	}
 }
@@ -176,26 +214,45 @@ public OnTakeDamage(victim, attacker, inflictor, Float:damage, damagetype)
 {	
 	if (attacker > 0 && attacker <= MaxClients && victim > 0 && victim <= MaxClients)
 	{
-		new hitgroup = g_iNextHitgroup[victim];
+		decl String: weapon[MAX_WEAPON_LEN + PREFIX_LEN];
+		GetClientWeapon(attacker, weapon, sizeof(weapon));
+		new weapon_index = -1;
+		if (IsValidEntity(inflictor))
+		{
+			decl String:inflictorclsname[64];
+			if (GetEntityNetClass(inflictor, inflictorclsname, sizeof(inflictorclsname)) && strcmp(inflictorclsname, "CCrossbowBolt") == 0)
+			{
+				weapon_index = CROSSBOW;
+			}
+		}
+		if (weapon_index == -1)
+		{
+			weapon_index = get_weapon_index(weapon[PREFIX_LEN]);
+		}
+		new hitgroup = ((weapon_index == CROSSBOW)?g_iNextBowHitgroup[victim]:g_iNextHitgroup[victim]);
 		if (hitgroup < 8)
 		{
 			hitgroup += LOG_HIT_OFFSET;
 		}
 		new bool:headshot = (GetClientHealth(victim) <= 0 && hitgroup == HITGROUP_HEAD);
-		
-		decl String: weapon[MAX_WEAPON_LEN + PREFIX_LEN];
-		GetClientWeapon(attacker, weapon, sizeof(weapon));
-		new weapon_index = get_weapon_index(weapon[PREFIX_LEN]);
 		if (weapon_index > -1)
 		{
 			g_weapon_stats[attacker][weapon_index][LOG_HIT_HITS]++;
 			g_weapon_stats[attacker][weapon_index][LOG_HIT_DAMAGE] += RoundToNearest(damage);
+			g_weapon_stats[attacker][weapon_index][hitgroup]++;
 			if (headshot)
 			{
 				g_weapon_stats[attacker][weapon_index][LOG_HIT_HEADSHOTS]++;
 			}
 		}
-		g_iNextHitgroup[victim] = 0;
+		if (weapon_index == CROSSBOW)
+		{
+			g_iNextBowHitgroup[victim] = 0;
+		}
+		else
+		{
+			g_iNextHitgroup[victim] = 0;
+		}
 	}
 }
 
@@ -213,9 +270,21 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 	{
 		LogKillLoc(attacker, victim);
 	}
-	if (g_logheadshots && g_iNextHitgroup[victim] == HITGROUP_HEAD)
+	if (g_logheadshots)
 	{
-		LogPlayerEvent(attacker, "triggered", "headshot");
+		decl String:weapon[64];
+		GetEventString(event, "weapon", weapon, sizeof(weapon));
+		if (strcmp(weapon, "crossbow_bolt") == 0)
+		{
+			if (g_iNextBowHitgroup[victim] == HITGROUP_HEAD)
+			{
+				LogPlayerEvent(attacker, "triggered", "headshot");
+			}
+		}
+		else if (g_iNextHitgroup[victim] == HITGROUP_HEAD)
+		{
+			LogPlayerEvent(attacker, "triggered", "headshot");
+		}		
 	}
 	
 	return Plugin_Continue;
@@ -233,16 +302,19 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 	decl String: weapon[MAX_WEAPON_LEN];
 	GetEventString(event, "weapon", weapon, sizeof(weapon));
 	
-	if (victim > 0 && attacker > 0)
+	if (victim > 0)
 	{
-		new weapon_index = get_weapon_index(weapon);
-		if (weapon_index > -1)
+		if (attacker != victim && attacker > 0)
 		{
-			g_weapon_stats[attacker][weapon_index][LOG_HIT_KILLS]++;
-			g_weapon_stats[victim][weapon_index][LOG_HIT_DEATHS]++;
-			if (GetClientTeam(attacker) == GetClientTeam(victim))
+			new weapon_index = get_weapon_index(weapon);
+			if (weapon_index > -1)
 			{
-				g_weapon_stats[attacker][weapon_index][LOG_HIT_TEAMKILLS]++;
+				g_weapon_stats[attacker][weapon_index][LOG_HIT_KILLS]++;		
+				g_weapon_stats[victim][weapon_index][LOG_HIT_DEATHS]++;
+				if (g_bTeamPlay && GetClientTeam(attacker) == GetClientTeam(victim))
+				{
+					g_weapon_stats[attacker][weapon_index][LOG_HIT_TEAMKILLS]++;
+				}	
 			}
 		}
 		dump_player_stats(victim);
@@ -310,6 +382,11 @@ public OnCvarLocationsChange(Handle:cvar, const String:oldVal[], const String:ne
 			UnhookEvent("player_death", Event_PlayerDeathPre, EventHookMode_Pre);
 		}
 	}
+}
+
+public OnTeamPlayChange(Handle:cvar, const String:oldVal[], const String:newVal[])
+{
+	g_bTeamPlay = GetConVarBool(g_cvar_teamplay);
 }
 
 public OnCvarKtrajChange(Handle:cvar, const String:oldVal[], const String:newVal[])
