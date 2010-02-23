@@ -26,7 +26,7 @@
 #include <sdkhooks>
 
 #define NAME "SuperLogs: HL2MP"
-#define VERSION "1.0.0"
+#define VERSION "1.0.1"
 
 #define MAX_LOG_WEAPONS 6
 #define MAX_WEAPON_LEN 14
@@ -61,6 +61,8 @@ new g_iNextBowHitgroup[MAXPLAYERS+1];
 new g_bTeamPlay;
 
 new g_iCrossBowOwnerOffs = -1;
+
+new Handle:g_hBoltChecks = INVALID_HANDLE;
 
 #include <loghelper>
 #include <wstatshelper>
@@ -130,6 +132,8 @@ public OnPluginStart()
 		g_bTeamPlay = GetConVarBool(g_cvar_teamplay);
 		HookConVarChange(g_cvar_teamplay, OnTeamPlayChange);
 	}
+	
+	g_hBoltChecks = CreateStack();
 }
 
 public OnAllPluginsLoaded()
@@ -165,19 +169,23 @@ public OnEntityCreated(entity, const String:classname[])
 {
 	if (strcmp(classname, "crossbow_bolt") == 0)
 	{
-		CreateTimer(0.1, CrossbowShot, entity, TIMER_FLAG_NO_MAPCHANGE);
+		PushStackCell(g_hBoltChecks, entity);
 	}
 }
 
-public Action:CrossbowShot(Handle:timer, any:bowent)
+public OnGameFrame()
 {
-	if (IsValidEntity(bowent))
+	new bowent;
+	while (PopStackCell(g_hBoltChecks, bowent))
 	{
+		if (!IsValidEntity(bowent))
+			continue;
+			
 		new owner = GetEntDataEnt2(bowent, g_iCrossBowOwnerOffs);
-		if (owner > 0 && owner <= MaxClients)
-		{
-			g_weapon_stats[owner][CROSSBOW][LOG_HIT_SHOTS]++;
-		}
+		if (owner < 0 || owner > MaxClients)
+			continue;
+			
+		g_weapon_stats[owner][CROSSBOW][LOG_HIT_SHOTS]++;
 	}
 }
 
