@@ -133,11 +133,11 @@ reset_player_stats(client)
 	}
 }
 
-stock get_weapon_index(const String: weapon_name[], tf2aux = 0)
+stock get_weapon_index(const String: weapon_name[], tf2aux = 0, start = 0)
 {
 	new hash = compute_hash(weapon_name);
 	new loop_break = 0;
-	new index = 0;
+	new index = start;
 	while ((loop_break == 0) && (index < MAX_LOG_WEAPONS))
 	{
 		if (g_weapon_hashes[index] == hash)

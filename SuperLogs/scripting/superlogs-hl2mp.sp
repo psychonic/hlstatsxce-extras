@@ -48,12 +48,10 @@ new g_weapon_hashes[MAX_LOG_WEAPONS];
 
 new Handle:g_cvar_headshots = INVALID_HANDLE;
 new Handle:g_cvar_locations = INVALID_HANDLE;
-new Handle:g_cvar_ktraj = INVALID_HANDLE;
 new Handle:g_cvar_teamplay = INVALID_HANDLE;
 
 new bool:g_logheadshots = true;
 new bool:g_loglocations = true;
-new bool:g_logktraj = true;
 
 new g_iNextHitgroup[MAXPLAYERS+1];
 new g_iNextBowHitgroup[MAXPLAYERS+1];
@@ -111,18 +109,14 @@ public OnPluginStart()
 	
 	g_cvar_headshots = CreateConVar("superlogs_headshots", "1", "Enable logging of headshot player action (default on)", 0, true, 0.0, true, 1.0);
 	g_cvar_locations = CreateConVar("superlogs_locations", "1", "Enable logging of location on player death (default on)", 0, true, 0.0, true, 1.0);
-	g_cvar_ktraj = CreateConVar("superlogs_ktraj", "0", "Enable Psychostats \"KTRAJ\" logging (default off)", 0, true, 0.0, true, 1.0);
 	HookConVarChange(g_cvar_headshots, OnCvarHeadshotsChange);
 	HookConVarChange(g_cvar_locations, OnCvarLocationsChange);
-	HookConVarChange(g_cvar_ktraj, OnCvarKtrajChange);
 	CreateConVar("superlogs_hl2mp_version", VERSION, NAME, FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
 	
 	g_iCrossBowOwnerOffs = FindSendPropInfo("CCrossbowBolt", "m_hOwnerEntity");
 		
+	hook_wstats();
 	HookEvent("player_death", Event_PlayerDeathPre, EventHookMode_Pre);
-	HookEvent("player_death", Event_PlayerDeath);
-	HookEvent("player_spawn", Event_PlayerSpawn);
-	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 		
 	CreateTimer(1.0, LogMap);
 	
@@ -156,6 +150,13 @@ public OnAllPluginsLoaded()
 public OnMapStart()
 {
 	GetTeams();
+}
+
+hook_wstats()
+{
+	HookEvent("player_death", Event_PlayerDeath);
+	HookEvent("player_spawn", Event_PlayerSpawn);
+	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 }
 
 public OnClientPutInServer(client)
@@ -306,14 +307,14 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 	// "weapon"        "string"        // weapon name killer used 
 	
 	new victim   = GetClientOfUserId(GetEventInt(event, "userid"));
-	new attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
-	decl String: weapon[MAX_WEAPON_LEN];
-	GetEventString(event, "weapon", weapon, sizeof(weapon));
 	
 	if (victim > 0)
 	{
+		new attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
 		if (attacker != victim && attacker > 0)
 		{
+			decl String: weapon[MAX_WEAPON_LEN];
+			GetEventString(event, "weapon", weapon, sizeof(weapon));
 			new weapon_index = get_weapon_index(weapon);
 			if (weapon_index > -1)
 			{
@@ -326,10 +327,6 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 			}
 		}
 		dump_player_stats(victim);
-	}
-	if (g_logktraj)
-	{
-		LogPSKillTraj(attacker, victim, weapon);
 	}
 }
 
@@ -395,9 +392,4 @@ public OnCvarLocationsChange(Handle:cvar, const String:oldVal[], const String:ne
 public OnTeamPlayChange(Handle:cvar, const String:oldVal[], const String:newVal[])
 {
 	g_bTeamPlay = GetConVarBool(g_cvar_teamplay);
-}
-
-public OnCvarKtrajChange(Handle:cvar, const String:oldVal[], const String:newVal[])
-{
-	g_logktraj = GetConVarBool(g_cvar_ktraj);
 }
