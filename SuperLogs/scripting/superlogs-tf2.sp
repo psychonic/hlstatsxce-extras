@@ -27,7 +27,7 @@
 #undef REQUIRE_EXTENSIONS
 #tryinclude <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 
-#define VERSION "2.0.2"
+#define VERSION "2.0.3"
 #if defined _sdkhooks_included
 	#define NAME "SuperLogs: TF2"
 #else
@@ -241,7 +241,7 @@ public OnPluginStart()
 	cvar_fire = CreateConVar("superlogs_fire", "1", "Enable logging of fiery arrows as a separate weapon from regular arrows (default on)", 0, true, 0.0, true, 1.0);
 	cvar_wstats = CreateConVar("superlogs_wstats", "1", "Enable logging of weapon stats (default on, only works when tf_weapon_criticals is 1)", 0, true, 0.0, true, 1.0);
 	cvar_heals = CreateConVar("superlogs_heals", "1", "Enable logging of healpoints upon death (default on)", 0, true, 0.0, true, 1.0);
-	cvar_rolelogfix = CreateConVar("superlogs_heals", "1", "Enable logging of healpoints upon death (default on)", 0, true, 0.0, true, 1.0);
+	cvar_rolelogfix = CreateConVar("superlogs_rolelogfix", "1", "Enable logging of healpoints upon death (default on)", 0, true, 0.0, true, 1.0);
 	cvar_objlogfix = CreateConVar("superlogs_objlogfix", "1", "Enable logging of owner object destruction on team/class change (default on)", 0, true, 0.0, true, 1.0);
 
 	HookConVarChange(cvar_crits,OnConVarStatsChange);
