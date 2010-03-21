@@ -27,7 +27,7 @@
 #undef REQUIRE_EXTENSIONS
 #tryinclude <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 
-#define VERSION "2.0.3"
+#define VERSION "2.0.5"
 #if defined _sdkhooks_included
 	#define NAME "SuperLogs: TF2"
 #else
@@ -38,6 +38,7 @@
 #define MAX_WEAPON_LEN 29
 #define MAX_BULLET_WEAPONS 14
 #define MAX_UNLOCKABLE_WEAPONS 6
+#define MAX_LOADOUT_SLOTS 8
 #define WEAPON_PREFIX_LENGTH 10
 #define WEAPON_FULL_LENGTH (WEAPON_PREFIX_LENGTH + MAX_WEAPON_LEN)
 #define TELEPORT_AGAIN_TIME 10.0
@@ -58,6 +59,8 @@
 #define WEAPONID_ARROW 60
 #define WEAPONID_JAR 39
 #define WEAPONID_BASEBALL 38
+#define ITEMINDEX_DEMOSHIELD 131
+#define ITEMINDEX_GUNBOATS 133
 #define JUMP_NONE 0
 #define JUMP_ROCKET_START 1
 #define JUMP_ROCKET 2
@@ -69,6 +72,7 @@
 #define LOG_TEAMKILLS 4
 #define LOG_DAMAGE 5
 #define LOG_DEATHS 6
+#define LUNCHBOX_CHOCOLATE 159
 
 public Plugin:myinfo = {
 	name = NAME,
@@ -117,19 +121,24 @@ new Handle:h_weapontrie;
 // Weapon Stats
 new weaponStats[MAXPLAYERS+1][MAX_LOG_WEAPONS][7];
 new nextHurt[MAXPLAYERS+1] = {-1, ...};
-// Unlockable status - Each class may have 1 (at the moment) that we track for
-new bool:unlockableStatus[MAXPLAYERS+1];
-// Stunball id (so we aren't looking it up in gameframe)
+// Loadout Info
+new playerLoadout[MAXPLAYERS+1][MAX_LOADOUT_SLOTS][2];
 #if defined _sdkhooks_included
+new bool:playerLoadoutUpdated[MAXPLAYERS+1];
+new Handle:itemsKv;
+new Handle:slotsTrie;
+// Stunball id (so we aren't looking it up in gameframe)
 new stunBallId = -1;
 #endif
 // Stacks for "object destroyed at spawn"
 new Handle:h_objList[MAXPLAYERS+1];
 // Time storage for the same
 new Float:f_objRemoved[MAXPLAYERS+1];
-// Stunball Stack
 #if defined _sdkhooks_included
+// Stunball Stack
 new Handle:h_stunBalls;
+// Wearables Stack
+new Handle:h_wearables;
 #endif
 
 // Teleporter Stat-Padding Fix: Keep track of last use of teleporter
@@ -138,6 +147,8 @@ new Float:f_lastTeleport[MAXPLAYERS+1][MAXPLAYERS+1];
 new healPoints[MAXPLAYERS+1];
 // Rocket/Sticky Jump Status
 new jumpStatus[MAXPLAYERS+1];
+// Last dalokohs eaten
+new Float:dalokohs[MAXPLAYERS+1];
 
 // Last known class of players
 // Likely less intensive to keep track of this for sound hooks
@@ -172,9 +183,9 @@ new const String:weaponList[MAX_LOG_WEAPONS][MAX_WEAPON_LEN] = {
 	"tf_projectile_arrow",
 	"tf_projectile_pipe",
 	"tf_projectile_pipe_remote",
-	"tf_projectile_pipe_remote_sr", // Wishful thinking
+	"tf_projectile_pipe_remote_sr",
 	"tf_projectile_rocket",
-	"tf_projectile_rocket_dh", // From this point forward is wishful thinking right now
+	"tf_projectile_rocket_dh",
 	"deflect_rocket",
 	"deflect_promode",
 	"deflect_flare",
@@ -203,33 +214,21 @@ new const String:weaponUnlockables[MAX_UNLOCKABLE_WEAPONS][MAX_WEAPON_LEN] = {
 	"revolver",
 	"scattergun",
 	"syringegun_medic",
-	"tf_projectile_pipe_remote", // Wishful thinking
-	"tf_projectile_rocket" // More wishful thinking
+	"tf_projectile_pipe_remote",
+	"tf_projectile_rocket"
 };
 
 #if defined _sdkhooks_included
-#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 3
 public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
-#else
-public bool:AskPluginLoad(Handle:myself, bool:late, String:error[], err_max)
-#endif
 {
 	MarkNativeAsOptional("SDKHook"); // This needs to be marked optional for a number of reasons
-#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 3
 	return APLRes_Success;
-#else
-	return true;
-#endif
 }
 #endif
 
 public OnPluginStart()
 {
-#if defined _sdkhooks_included
-	h_stunBalls = CreateStack();
-#endif
-
-	CreateConVar("superlogs_tf2_version", VERSION, NAME, FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
+	CreateConVar("superlogs_tf_version", VERSION, NAME, FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
 
 	cvar_crits = FindConVar("tf_weapon_criticals");
 	cvar_actions = CreateConVar("superlogs_actions", "1", "Enable logging of most player actions, such as \"stun\" (default on)", 0, true, 0.0, true, 1.0);
@@ -256,6 +255,23 @@ public OnPluginStart()
 	HookConVarChange(cvar_heals,OnConVarHealsChange);
 	HookConVarChange(cvar_rolelogfix,OnConVarRolelogfixChange);
 	HookConVarChange(cvar_objlogfix,OnConVarObjlogfixChange);
+
+#if defined _sdkhooks_included
+	h_stunBalls = CreateStack();
+	h_wearables = CreateStack();
+	itemsKv = CreateKeyValues("items_game");
+	if(FileToKeyValues(itemsKv, "scripts/items/items_game.txt"))
+		KvJumpToKey(itemsKv, "items");
+	slotsTrie = CreateTrie();
+	SetTrieValue(slotsTrie, "primary", 0);
+	SetTrieValue(slotsTrie, "secondary", 1);
+	SetTrieValue(slotsTrie, "melee", 2);
+	SetTrieValue(slotsTrie, "pda", 3);
+	SetTrieValue(slotsTrie, "pda2", 4);
+	SetTrieValue(slotsTrie, "building", 5);
+	SetTrieValue(slotsTrie, "head", 6);
+	SetTrieValue(slotsTrie, "misc", 7);
+#endif
 
 	// Populate the Weapon Trie
 	// Creates it too, technically
@@ -326,34 +342,16 @@ public OnAllPluginsLoaded()
 public OnEntityCreated(entity, const String:className[])
 {
 	if(b_wstats && StrEqual(className, "tf_projectile_stun_ball"))
-#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 3
 		PushStackCell(h_stunBalls, EntIndexToEntRef(entity));
-#else
-		PushStackCell(h_stunBalls, entity);
-#endif
-}
-
-public OnGameFrame()
-{
-	new entity;
-	new thrower;
-	if(stunBallId > -1)
+	else if(StrEqual(className, "tf_wearable_item_demoshield") || StrEqual(className, "tf_wearable_item"))
 	{
-		while(PopStackCell(h_stunBalls, entity))
-		{
-			if(IsValidEntity(entity))
-			{
-				thrower = GetEntPropEnt(entity, Prop_Send, "m_hThrower");
-				if(thrower > 0 && thrower <= MaxClients)
-					weaponStats[thrower][stunBallId][LOG_SHOTS]++;
-			}
-		}
+		PushStackCell(h_wearables, EntIndexToEntRef(entity));
 	}
 }
 
 public Action:OnTakeDamage(victim, &attacker, &inflictor, &Float:damage, &damagetype)
 {
-	if(b_actions && attacker > 0 && attacker != victim && inflictor > MaxClients && IsValidEntity(inflictor) && GetEntityFlags(victim) & (FL_ONGROUND | FL_INWATER) == 0)
+	if(b_actions && attacker > 0 && attacker != victim && inflictor > MaxClients && IsValidEntity(inflictor) && (GetEntityFlags(victim) & (FL_ONGROUND | FL_INWATER)) == 0)
 	{
 		decl String:weapon[WEAPON_FULL_LENGTH];
 		GetEdictClassname(inflictor, weapon, sizeof(weapon));
@@ -369,7 +367,7 @@ public Action:OnTakeDamage(victim, &attacker, &inflictor, &Float:damage, &damage
 				}
 				case 'p':
 				{
-					if(weapon[19] == 0)
+					if(weapon[18] != 0)
 					{
 						LogPlayerEvent(attacker, "triggered", "airshot_sticky");
 						if(jumpStatus[attacker] == JUMP_STICKY)
@@ -414,7 +412,7 @@ public OnTakeDamage_Post(victim, attacker, inflictor, Float:damage, damagetype)
 			GetEdictClassname(inflictor, weapon, sizeof(weapon));
 			if (weapon[WEAPON_PREFIX_LENGTH] == 'g')
 				return; // grenadelauncher, but the projectile does damage, not the weapon. So this must be Charge N Targe.
-			else if(weapon[3] == 'p') // Eliminate pumpkin bomb with the r
+			else if(weapon[3] == 'p')
 			{
 				weapon_index = GetWeaponIndex(weapon, attacker, inflictor);
 			}
@@ -438,6 +436,54 @@ public OnTakeDamage_Post(victim, attacker, inflictor, Float:damage, damagetype)
 		}
 	}
 }
+
+public OnGameFrame()
+{
+	new entity;
+	new owner;
+	new itemindex, slot;
+	decl String:tempstring[15];
+	if(stunBallId > -1)
+	{
+		while(PopStackCell(h_stunBalls, entity))
+		{
+			if(IsValidEntity(entity))
+			{
+				owner = GetEntPropEnt(entity, Prop_Send, "m_hThrower");
+				if(owner > 0 && owner <= MaxClients)
+					weaponStats[owner][stunBallId][LOG_SHOTS]++;
+			}
+		}
+	}
+	while(PopStackCell(h_wearables, entity))
+	{
+		if(IsValidEntity(entity))
+		{
+			owner = GetEntPropEnt(entity, Prop_Send, "m_hOwnerEntity");
+			if(owner > 0 && owner <= MaxClients)
+			{
+				itemindex = GetEntProp(entity, Prop_Send, "m_iItemDefinitionIndex");
+				Format(tempstring, sizeof(tempstring), "%d", itemindex);
+				if(KvJumpToKey(itemsKv, tempstring))
+				{
+					KvGetString(itemsKv, "item_slot", tempstring, sizeof(tempstring));
+					if(GetTrieValue(slotsTrie, tempstring, slot))
+					{
+						if(slot == 0 && playerClass[owner] == TFClass_DemoMan)
+							slot++;
+						if(playerLoadout[owner][slot][0] != itemindex)
+						{
+							playerLoadout[owner][slot][0] = itemindex;
+							playerLoadoutUpdated[owner] = true;
+						}
+						playerLoadout[owner][slot][1] = entity;
+					}
+					KvGoBack(itemsKv);
+				}
+			}
+		}
+	}
+}
 #endif
 
 public OnClientPutInServer(client)
@@ -448,6 +494,7 @@ public OnClientPutInServer(client)
 		SDKHook(client, SDKHook_OnTakeDamagePost, OnTakeDamage_Post);
 		SDKHook(client, SDKHook_OnTakeDamage, OnTakeDamage);
 	}
+	playerLoadoutUpdated[client] = true;
 #endif
 	for(new i = 0; i <= MaxClients; i++)
 	{
@@ -458,6 +505,8 @@ public OnClientPutInServer(client)
 	f_objRemoved[client] = 0.0;
 	playerClass[client] = TFClass_Unknown;
 	healPoints[client] = 0;
+	for(new i = 0; i < MAX_LOADOUT_SLOTS; i++)
+		playerLoadout[client][i] = {-1, -1};
 }
 
 public OnClientDisconnect(client)
@@ -553,6 +602,7 @@ public Event_PlayerSpawn(Handle:event, const String:name[], bool:dontBroadcast)
 		}
 	}
 	playerClass[client] = spawnClass;
+	dalokohs[client] = -30.0;
 }
 
 public Event_ObjectRemoved(Handle:event, const String:name[], bool:dontBroadcast)
@@ -583,7 +633,7 @@ public Event_PlayerStunned(Handle:event, const String:name[], bool:dontBroadcast
 		if(GetEventBool(event, "victim_capping")) StrCat(properties, sizeof(properties), " (victim_capping)");
 		if(GetEventBool(event, "big_stun")) StrCat(properties, sizeof(properties), " (big_stun)");
 		LogPlyrPlyrEvent(stunner, victim, "triggered", "stun", true);
-		if(GetEntityFlags(victim) & (FL_ONGROUND | FL_INWATER) == 0)
+		if((GetEntityFlags(victim) & (FL_ONGROUND | FL_INWATER)) == 0)
 			LogPlayerEvent(stunner, "triggered", "airshot_stun");
 	}
 }
@@ -660,7 +710,7 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 		{
 			new client = GetClientOfUserId(GetEventInt(event, "userid"));
 			if(client != attacker && client > 0 && client <= MaxClients && IsClientInGame(client)
-				&& IsPlayerAlive(client) && GetEntityFlags(client) & (FL_ONGROUND | FL_INWATER) == 0)
+				&& IsPlayerAlive(client) && (GetEntityFlags(client) & (FL_ONGROUND | FL_INWATER)) == 0)
 			{
 				switch(GetEventInt(event, "weaponid"))
 				{
@@ -744,7 +794,7 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 					else if(death_flags & 16)
 						LogPlayerEvent(attacker, "triggered", "first_blood");
 					if (customkill == 1 && client > 0 && client <= MaxClients
-						&& IsClientInGame(client) && GetEntityFlags(client) & (FL_ONGROUND | FL_INWATER) == 0)
+						&& IsClientInGame(client) && (GetEntityFlags(client) & (FL_ONGROUND | FL_INWATER)) == 0)
 						LogPlayerEvent(attacker, "triggered", "airshot_headshot");
 				}
 			}
@@ -913,24 +963,91 @@ public Event_ObjectDeflected(Handle:event, const String:name[], bool:dontBroadca
 
 public Event_PostInventoryApplication(Handle:event, const String:name[], bool:dontBroadcast)
 {
-	new client = GetClientOfUserId(GetEventInt(event, "userid"));
-	new slot = -1;
-	unlockableStatus[client] = false;
-	switch(playerClass[client])
+	CreateTimer(0.2, CheckPlayerLoadout, GetEventInt(event, "userid"));
+}
+
+public Action:CheckPlayerLoadout(Handle:timer, any:userid)
+{
+	new client = GetClientOfUserId(userid);
+	new ent = -1;
+	new bool:newLoadout = false;
+#if defined _sdkhooks_included
+	new TFClassType:pClass = playerClass[client];
+#endif
+	for(new checkslot = 0; checkslot <=5; checkslot++)
 	{
-		// Slot 0 classes
-		case TFClass_Scout, TFClass_Soldier, TFClass_Medic, TFClass_Heavy, TFClass_Pyro, TFClass_Spy:
-			slot = 0;
-		// Slot 1 classes
-		case TFClass_DemoMan:
-			slot = 1;
+		if(playerLoadout[client][checkslot][1] != 0 && IsValidEntity(playerLoadout[client][checkslot][1]))
+		{
+			continue;
+		}
+		ent = GetPlayerWeaponSlot(client, checkslot);
+		if(ent == -1)
+		{
+			// Nothing in slot?
+#if defined _sdkhooks_included
+			if(b_sdkhookloaded && checkslot < 3 && (pClass == TFClass_Soldier || pClass == TFClass_DemoMan)) // Maybe gunboats? Or charge n targe?
+			{
+				playerLoadout[client][checkslot][1] = -1;
+				continue;
+			}
+#endif
+			if(playerLoadout[client][checkslot][0] == -1)
+				continue;
+			playerLoadout[client][checkslot] = {-1, -1};
+			newLoadout = true;
+		}
+		else
+		{
+			new itemindex = GetEntProp(ent, Prop_Send, "m_iItemDefinitionIndex");
+			if(playerLoadout[client][checkslot][0] != itemindex)
+			{
+				playerLoadout[client][checkslot][0] = itemindex;
+				newLoadout = true;
+			}
+			playerLoadout[client][checkslot][1] = EntIndexToEntRef(ent);
+		}
 	}
-	if(slot > 0)
+#if defined _sdkhooks_included
+	if(b_sdkhookloaded)
 	{
-		slot = GetPlayerWeaponSlot(client, slot);
-		if(slot > -1) // Charge N Targe, in particular, doesn't actually occupy the slot
-			unlockableStatus[client] = (GetEntProp(slot, Prop_Send, "m_iEntityQuality") > 0);
+		if(newLoadout) // Just in case we already updated it due to a hat spawning or being a new client
+			playerLoadoutUpdated[client] = true;
+		CreateTimer(0.2, LogWeaponLoadout, userid);
+		return;
 	}
+#endif
+	if(newLoadout)
+		LogWeaponLoadout(INVALID_HANDLE, userid);
+}
+
+public Action:LogWeaponLoadout(Handle:timer, any:userid)
+{
+	new client = GetClientOfUserId(userid);
+	if(client > 0 && IsClientInGame(client))
+	{
+		for(new i = 0; i < MAX_LOADOUT_SLOTS; i++)
+		{
+			if(playerLoadout[client][i][0] != -1 && !IsValidEntity(playerLoadout[client][i][1]) || playerLoadout[client][i][1] == 0)
+			{
+				playerLoadout[client][i] = {-1, -1};
+#if defined _sdkhooks_included
+				playerLoadoutUpdated[client] = true;
+#endif
+			}
+		}
+#if defined _sdkhooks_included
+		if(playerLoadoutUpdated[client] == false)
+			return Plugin_Stop;
+		playerLoadoutUpdated[client] = false;
+#endif
+		if(client > 0 && IsClientInGame(client))
+		{
+			decl String:logString[255];
+			Format(logString, sizeof(logString), " (primary \"%d\") (secondary \"%d\") (melee \"%d\") (pda \"%d\") (pda2 \"%d\") (building \"%d\") (head \"%d\") (misc \"%d\")", playerLoadout[client][0][0], playerLoadout[client][1][0], playerLoadout[client][2][0], playerLoadout[client][3][0], playerLoadout[client][4][0], playerLoadout[client][5][0], playerLoadout[client][6][0], playerLoadout[client][7][0]);
+			LogPlayerEvent(client, "triggered", "player_loadout", _, logString);
+		}
+	}
+	return Plugin_Stop;
 }
 
 public Action:Event_PlayerJarated(UserMsg:msg_id, Handle:bf, const players[], playersNum, bool:reliable, bool:init)
@@ -956,9 +1073,22 @@ public Action:SoundHook(clients[64], &numClients, String:sample[PLATFORM_MAX_PAT
 {
 	if(clients[0] == entity && playerClass[entity] == TFClass_Heavy && StrEqual(sample,"vo/SandwichEat09.wav"))
 	{
-		LogPlayerEvent(entity, "triggered", "sandvich");
-		if(GetClientHealth(entity) < 300)
-			LogPlayerEvent(entity, "triggered", "sandvich_healself");
+		if(playerLoadout[entity][1][0] == LUNCHBOX_CHOCOLATE)
+		{
+			LogPlayerEvent(entity, "triggered", "dalokohs");
+			new Float:time = GetGameTime();
+			if(time - dalokohs[entity] > 30)
+				LogPlayerEvent(entity, "triggered", "dalokohs_healthboost");
+			dalokohs[entity] = time;
+			if(GetClientHealth(entity) < 350)
+				LogPlayerEvent(entity, "triggered", "dalokohs_healself");
+		}
+		else
+		{
+			LogPlayerEvent(entity, "triggered", "sandvich");
+			if(GetClientHealth(entity) < 300)
+				LogPlayerEvent(entity, "triggered", "sandvich_healself");
+		}
 	}
 	return Plugin_Continue;
 }
@@ -1052,8 +1182,18 @@ GetWeaponIndex(const String:weaponname[], client = 0, weapon = -1)
 		}
 		if(reflectindex > -1)
 			return reflectindex;
-		if(unlockable && unlockableStatus[client])
-				index++;
+		if(unlockable && client > 0)
+		{
+			new slot = 0;
+			if(playerClass[client] == TFClass_DemoMan)
+				slot = 1;
+			new itemindex = playerLoadout[client][slot][0];
+			switch(itemindex) // Hell of a lot easier than a set of ifs. <_<
+			{
+				case 36, 41, 45, 61, 127, 130:
+					index++;
+			}
+		}
 		return index;
 	}
 	else
@@ -1068,7 +1208,7 @@ DumpHeals(client, String:addProp[] = "")
 	{
 		decl String:szProperties[32];
 		Format(szProperties, sizeof(szProperties), " (healing \"%d\")%s", lifeHeals, addProp);
-		LogPlayerEvent(client, "triggered", "healed", false, szProperties);
+		LogPlayerEvent(client, "triggered", "healed", _, szProperties);
 	}
 	healPoints[client] = curHeals;
 }
