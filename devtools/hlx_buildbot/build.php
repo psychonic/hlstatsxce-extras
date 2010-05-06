@@ -27,7 +27,7 @@ if ((isset($_GET['force'])) && ($_GET['force'] == 1)) {
 }
 
 # Obtain json data
-if (($force == 0) && ($_GET['project'] == 'hlstatsxcommunity')) {
+if (($force == 0) && ($_POST['project'] == 'hlstatsxcommunity')) {
 	$rev_data = file_get_contents("php://input");
 	if ($rev_data) {
 		$rev_data = json_decode($data,true);
