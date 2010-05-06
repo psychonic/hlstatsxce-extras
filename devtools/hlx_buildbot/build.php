@@ -27,15 +27,13 @@ if ((isset($_GET['force'])) && ($_GET['force'] == 1)) {
 }
 
 # Obtain json data
-if (($force == 0) && ($_POST['project'] == 'hlstatsxcommunity')) {
+if ($_POST['project'] == 'hlstatsxcommunity') {
 	$rev_data = file_get_contents("php://input");
-	if ($rev_data) {
-		$rev_data = json_decode($data,true);
-		if (!strpos($repo,"hlx-16")) {
-			$build_dev = 1;
-		} else {
-			$build_stable = 1;
-		}
+	$rev_data = json_decode($data,true);
+	if (!strpos($repo,"hlx-16")) {
+		$build_dev = 1;
+	} else {
+		$build_stable = 1;
 	}
 }
 
