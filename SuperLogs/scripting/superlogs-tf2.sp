@@ -969,6 +969,11 @@ public Event_PostInventoryApplication(Handle:event, const String:name[], bool:do
 public Action:CheckPlayerLoadout(Handle:timer, any:userid)
 {
 	new client = GetClientOfUserId(userid);
+	if (client == 0 || !IsClientInGame(client))
+	{
+		return Plugin_Stop;
+	}
+	
 	new ent = -1;
 	new bool:newLoadout = false;
 #if defined _sdkhooks_included
