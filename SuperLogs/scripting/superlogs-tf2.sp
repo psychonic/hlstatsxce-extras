@@ -1018,11 +1018,13 @@ public Action:CheckPlayerLoadout(Handle:timer, any:userid)
 		if(newLoadout) // Just in case we already updated it due to a hat spawning or being a new client
 			playerLoadoutUpdated[client] = true;
 		CreateTimer(0.2, LogWeaponLoadout, userid);
-		return;
+		return Plugin_Stop;
 	}
 #endif
 	if(newLoadout)
 		LogWeaponLoadout(INVALID_HANDLE, userid);
+		
+	return Plugin_Stop;
 }
 
 public Action:LogWeaponLoadout(Handle:timer, any:userid)
