@@ -27,7 +27,7 @@
 #undef REQUIRE_EXTENSIONS
 #tryinclude <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 
-#define VERSION "2.0.5"
+#define VERSION "2.0.6"
 #if defined _sdkhooks_included
 	#define NAME "SuperLogs: TF2"
 #else
