@@ -1,25 +1,3 @@
-////////////////////////////////////////////////////////////////////////////////
-// Original Hashing method by "PM", tweaked by psychonic
-////////////////////////////////////////////////////////////////////////////////
-
-#define chars_per_cell (cellbits / 8)
-
-compute_hash(const String:input[])
-{
-	new res = 0xFFFFFFFF;
-
-	for (new i = 0; input[i]; ++i)
-	{
-		if (input[i] == '\0')
-		{
-			break;
-		}
-		res ^= input[i] << ((i % chars_per_cell)*8);
-	}
-	return res;
-}
-
-
 #define HITGROUP_GENERIC   0
 #define HITGROUP_HEAD      1
 #define HITGROUP_CHEST     2
@@ -47,22 +25,27 @@ compute_hash(const String:input[])
 #define LOG_HIT_LEFTLEG    13
 #define LOG_HIT_RIGHTLEG   14
 
-CalcInitialHashes()
+new Handle:g_weapon_trie = INVALID_HANDLE;
+
+CreatePopulateWeaponTrie()
 {
-	for (new i = 0; i < MAX_LOG_WEAPONS; ++i)
+	// Create a Trie
+	g_weapon_trie = CreateTrie();
+	
+	// Initial populate
+	for (new i = 0; i < MAX_LOG_WEAPONS; i++)
 	{
-		g_weapon_hashes[i] = compute_hash(g_weapon_list[i]);
+		if (g_weapon_list[i][0] == 0)
+		{
+			// some games have a couple blanks as place holders (so array indexes match with weapon ids)
+			decl String:randomKey[6];
+			Format(randomKey, sizeof(randomKey), "%c%c%c%c%c%c", GetURandomInt(), GetURandomInt(), GetURandomInt(), GetURandomInt(), GetURandomInt(), GetURandomInt());
+			SetTrieValue(g_weapon_trie, randomKey, i);
+			continue;
+		}
+		
+		SetTrieValue(g_weapon_trie, g_weapon_list[i], i);
 	}
-	#if defined TF2
-		for (new i = 0; i < SHOOTAUXCOUNT; ++i)
-		{
-			g_weapon_hashes_shootaux[i] = compute_hash(g_weapon_list_shootaux[i]);
-		}
-		for (new i = 0; i < HITAUXCOUNT; ++i)
-		{
-			g_weapon_hashes_hitaux[i] = compute_hash(g_weapon_list_hitaux[i]);
-		}
-	#endif
 }
 
 dump_player_stats(client)
@@ -94,9 +77,7 @@ dump_player_stats(client)
 				LogToGame("\"%N<%d><%s><%s>\" triggered \"weaponstats2\" (weapon \"weapon_%s\") (head \"%d\") (chest \"%d\") (stomach \"%d\") (leftarm \"%d\") (rightarm \"%d\") (leftleg \"%d\") (rightleg \"%d\")", client, player_userid, player_authid, g_team_list[player_team_index], g_weapon_loglist[i], g_weapon_stats[client][i][LOG_HIT_HEAD], g_weapon_stats[client][i][LOG_HIT_CHEST], g_weapon_stats[client][i][LOG_HIT_STOMACH], g_weapon_stats[client][i][LOG_HIT_LEFTARM], g_weapon_stats[client][i][LOG_HIT_RIGHTARM], g_weapon_stats[client][i][LOG_HIT_LEFTLEG], g_weapon_stats[client][i][LOG_HIT_RIGHTLEG]); 
 				#else
 				LogToGame("\"%N<%d><%s><%s>\" triggered \"weaponstats\" (weapon \"%s\") (shots \"%d\") (hits \"%d\") (kills \"%d\") (headshots \"%d\") (tks \"%d\") (damage \"%d\") (deaths \"%d\")", client, player_userid, player_authid, g_team_list[player_team_index], g_weapon_list[i], g_weapon_stats[client][i][LOG_HIT_SHOTS], g_weapon_stats[client][i][LOG_HIT_HITS], g_weapon_stats[client][i][LOG_HIT_KILLS], g_weapon_stats[client][i][LOG_HIT_HEADSHOTS], g_weapon_stats[client][i][LOG_HIT_TEAMKILLS], g_weapon_stats[client][i][LOG_HIT_DAMAGE], g_weapon_stats[client][i][LOG_HIT_DEATHS]); 
-				#if ! defined TF2
 				LogToGame("\"%N<%d><%s><%s>\" triggered \"weaponstats2\" (weapon \"%s\") (head \"%d\") (chest \"%d\") (stomach \"%d\") (leftarm \"%d\") (rightarm \"%d\") (leftleg \"%d\") (rightleg \"%d\")", client, player_userid, player_authid, g_team_list[player_team_index], g_weapon_list[i], g_weapon_stats[client][i][LOG_HIT_HEAD], g_weapon_stats[client][i][LOG_HIT_CHEST], g_weapon_stats[client][i][LOG_HIT_STOMACH], g_weapon_stats[client][i][LOG_HIT_LEFTARM], g_weapon_stats[client][i][LOG_HIT_RIGHTARM], g_weapon_stats[client][i][LOG_HIT_LEFTLEG], g_weapon_stats[client][i][LOG_HIT_RIGHTLEG]);
-				#endif
 				#endif
 			#endif
 				is_logged++;
@@ -120,7 +101,6 @@ reset_player_stats(client)
 		g_weapon_stats[client][i][LOG_HIT_TEAMKILLS] = 0;
 		g_weapon_stats[client][i][LOG_HIT_DAMAGE]    = 0;
 		g_weapon_stats[client][i][LOG_HIT_DEATHS]    = 0;
-		#if ! defined TF2
 		g_weapon_stats[client][i][LOG_HIT_GENERIC]   = 0;
 		g_weapon_stats[client][i][LOG_HIT_HEAD]      = 0;
 		g_weapon_stats[client][i][LOG_HIT_CHEST]     = 0;
@@ -129,71 +109,14 @@ reset_player_stats(client)
 		g_weapon_stats[client][i][LOG_HIT_RIGHTARM]  = 0;
 		g_weapon_stats[client][i][LOG_HIT_LEFTLEG]   = 0;
 		g_weapon_stats[client][i][LOG_HIT_RIGHTLEG]  = 0;
-		#endif
 	}
 }
 
-stock get_weapon_index(const String: weapon_name[], tf2aux = 0, start = 0)
+stock get_weapon_index(const String:weapon_name[])
 {
-	new hash = compute_hash(weapon_name);
-	new loop_break = 0;
-	new index = start;
-	while ((loop_break == 0) && (index < MAX_LOG_WEAPONS))
-	{
-		if (g_weapon_hashes[index] == hash)
-		{
-			loop_break++;
-		}
-		index++;
-	}
-	
-	if (loop_break == 0)
-	{
-		#if defined TF2
-			switch (tf2aux)
-			{
-				case SHOOT:
-				{
-					loop_break = 0;
-					index = 0;
-					while ((loop_break == 0) && (index < SHOOTAUXCOUNT))
-					{
-						if (g_weapon_hashes_shootaux[index] == hash)
-						{
-							loop_break++;
-						}
-						index++;
-					}
-					if (loop_break == 0)
-					{
-						return -1;
-					}
-					return index - 1;
-				}
-				case HIT:
-				{
-					loop_break = 0;
-					index = 0;
-					while ((loop_break == 0) && (index < HITAUXCOUNT))
-					{
-						if (g_weapon_hashes_hitaux[index] == hash)
-						{
-							loop_break++;
-						}
-						index++;
-					}
-					if (loop_break == 0)
-					{
-						return -1;
-					}
-					return index - 1;
-				}
-			}
-		#endif
-		return -1;
-	}
-
-	return index - 1;
+	new index = -1;
+	GetTrieValue(g_weapon_trie, weapon_name, index);
+	return index;
 }
 
 

@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: L4D"
-#define VERSION "1.2"
+#define VERSION "1.3.0"
 
 #define MAX_LOG_WEAPONS 27
 #define MAX_WEAPON_LEN 16
@@ -61,8 +61,6 @@ new const String:g_weapon_list[MAX_LOG_WEAPONS][MAX_WEAPON_LEN] = {
 									"splitter_claw",
 									"charger_claw"
 									};
-								
-new g_weapon_hashes[MAX_LOG_WEAPONS];
 
 new Handle:g_cvar_wstats = INVALID_HANDLE;
 new Handle:g_cvar_actions = INVALID_HANDLE;
@@ -121,7 +119,7 @@ public bool:AskPluginLoad(Handle:myself, bool:late, String:error[], err_max)
 
 public OnPluginStart()
 {
-	CalcInitialHashes();
+	CreatePopulateWeaponTrie();
 	
 	g_cvar_wstats = CreateConVar("superlogs_wstats", "1", "Enable logging of weapon stats (default on)", 0, true, 0.0, true, 1.0);
 	g_cvar_actions = CreateConVar("superlogs_actions", "1", "Enable logging of player actions, such as \"Got_The_Bomb\" (default on)", 0, true, 0.0, true, 1.0);

@@ -27,7 +27,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: FOF"
-#define VERSION "1.0.1"
+#define VERSION "1.1.0"
 
 #define MAX_LOG_WEAPONS 18
 #define MAX_WEAPON_LEN 16
@@ -55,8 +55,6 @@ new const String:g_weapon_list[MAX_LOG_WEAPONS][MAX_WEAPON_LEN] = {
 									"peacemaker2"
 								};
 								
-new g_weapon_hashes[MAX_LOG_WEAPONS];
-
 new Handle:g_cvar_wstats = INVALID_HANDLE;
 new Handle:g_cvar_headshots = INVALID_HANDLE;
 new Handle:g_cvar_locations = INVALID_HANDLE;
@@ -82,7 +80,7 @@ public Plugin:myinfo = {
 
 public OnPluginStart()
 {
-	CalcInitialHashes();
+	CreatePopulateWeaponTrie();
 	
 	g_cvar_wstats = CreateConVar("superlogs_wstats", "1", "Enable logging of weapon stats (default on)", 0, true, 0.0, true, 1.0);
 	g_cvar_headshots = CreateConVar("superlogs_headshots", "1", "Enable logging of headshot player action (default on)", 0, true, 0.0, true, 1.0);

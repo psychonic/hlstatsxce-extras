@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: Insurgency"
-#define VERSION "1.0.3"
+#define VERSION "1.1.0"
 
 #define MAX_LOG_WEAPONS 19
 #define MAX_WEAPON_LEN 8
@@ -57,8 +57,6 @@ new const String: g_weapon_list[MAX_LOG_WEAPONS][MAX_WEAPON_LEN] = {
 									"bayonet"
 								};
 								
-new g_weapon_hashes[MAX_LOG_WEAPONS];
-
 new Handle:g_cvar_wstats = INVALID_HANDLE;
 new Handle:g_cvar_actions = INVALID_HANDLE;
 new Handle:g_cvar_headshots = INVALID_HANDLE;
@@ -120,7 +118,7 @@ public bool:AskPluginLoad(Handle:myself, bool:late, String:error[], err_max)
 
 public OnPluginStart()
 {
-	CalcInitialHashes();
+	CreatePopulateWeaponTrie();
 	
 	g_cvar_wstats = CreateConVar("superlogs_wstats", "1", "Enable logging of weapon stats (default on)", 0, true, 0.0, true, 1.0);
 	g_cvar_actions = CreateConVar("superlogs_actions", "1", "Enable logging of actions, such as \"Round_Win\" (default on)", 0, true, 0.0, true, 1.0);
