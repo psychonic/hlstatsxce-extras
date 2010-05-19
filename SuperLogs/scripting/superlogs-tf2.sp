@@ -27,7 +27,7 @@
 #undef REQUIRE_EXTENSIONS
 #tryinclude <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 
-#define VERSION "2.0.6"
+#define VERSION "2.0.7"
 #if defined _sdkhooks_included
 	#define NAME "SuperLogs: TF2"
 #else
@@ -183,9 +183,9 @@ new const String:weaponList[MAX_LOG_WEAPONS][MAX_WEAPON_LEN] = {
 	"tf_projectile_arrow",
 	"tf_projectile_pipe",
 	"tf_projectile_pipe_remote",
-	"tf_projectile_pipe_remote_sr",
+	"sticky_resistance",
 	"tf_projectile_rocket",
-	"tf_projectile_rocket_dh",
+	"rocketlauncher_directhit",
 	"deflect_rocket",
 	"deflect_promode",
 	"deflect_flare",
@@ -1137,14 +1137,14 @@ PopulateWeaponTrie()
 	}
 	if(GetTrieValue(h_weapontrie, "tf_projectile_rocket", index))
 		SetTrieValue(h_weapontrie, "rocketlauncher", index);
-	if(GetTrieValue(h_weapontrie, "tf_projectile_rocket_dh", index))
-		SetTrieValue(h_weapontrie, "rocketlauncher_directhit", index);
+	if(GetTrieValue(h_weapontrie, "rocketlauncher_directhit", index))
+		SetTrieValue(h_weapontrie, "tf_projectile_rocket_dh", index);
 	if(GetTrieValue(h_weapontrie, "tf_projectile_pipe", index))
 		SetTrieValue(h_weapontrie, "grenadelauncher", index);
 	if(GetTrieValue(h_weapontrie, "tf_projectile_pipe_remote", index))
 		SetTrieValue(h_weapontrie, "pipebomblauncher", index);
-	if(GetTrieValue(h_weapontrie, "tf_projectile_pipe_remote_sr", index))
-		SetTrieValue(h_weapontrie, "sticky_resistance", index);
+	if(GetTrieValue(h_weapontrie, "sticky_resistance", index))
+		SetTrieValue(h_weapontrie, "tf_projectile_pipe_remote_sr", index);
 	if(GetTrieValue(h_weapontrie, "flaregun", index))
 		SetTrieValue(h_weapontrie, "tf_projectile_flare", index);
 	if(GetTrieValue(h_weapontrie, "ball", index))
