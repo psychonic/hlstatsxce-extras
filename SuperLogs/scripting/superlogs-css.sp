@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: CSS"
-#define VERSION "1.1.0"
+#define VERSION "1.2.0"
 
 #define MAX_LOG_WEAPONS 28
 #define IGNORE_SHOTS_START 25
@@ -66,11 +66,13 @@ new const String:g_weapon_list[MAX_LOG_WEAPONS][MAX_WEAPON_LEN] = {
 
 new Handle:g_cvar_wstats = INVALID_HANDLE;
 new Handle:g_cvar_headshots = INVALID_HANDLE;
+new Handle:g_cvar_actions = INVALID_HANDLE;
 new Handle:g_cvar_locations = INVALID_HANDLE;
 new Handle:g_cvar_ktraj = INVALID_HANDLE;
 
 new bool:g_logwstats = true;
 new bool:g_logheadshots = true;
+new bool:g_logactions = true;
 new bool:g_loglocations = true;
 new bool:g_logktraj = false;
 
@@ -122,12 +124,23 @@ public OnPluginStart()
 	
 	g_cvar_wstats = CreateConVar("superlogs_wstats", "1", "Enable logging of weapon stats (default on)", 0, true, 0.0, true, 1.0);
 	g_cvar_headshots = CreateConVar("superlogs_headshots", "1", "Enable logging of headshot player action (default on)", 0, true, 0.0, true, 1.0);
+	g_cvar_actions = CreateConVar("superlogs_actions", "1", "Enable logging of player actions (default on)", 0, true, 0.0, true, 1.0);
 	g_cvar_locations = CreateConVar("superlogs_locations", "1", "Enable logging of location on player death (default on)", 0, true, 0.0, true, 1.0);
 	g_cvar_ktraj = CreateConVar("superlogs_ktraj", "0", "Enable Psychostats \"KTRAJ\" logging (default off)", 0, true, 0.0, true, 1.0);
+	
+	// cvars will have already existed if plugin was reloaded and might be set to non-default values
+	g_logwstats = GetConVarBool(g_cvar_wstats);
+	g_logheadshots = GetConVarBool(g_cvar_headshots);
+	g_logactions = GetConVarBool(g_cvar_actions);
+	g_loglocations = GetConVarBool(g_cvar_locations);
+	g_logktraj = GetConVarBool(g_cvar_ktraj);
+	
 	HookConVarChange(g_cvar_wstats, OnCvarWstatsChange);
 	HookConVarChange(g_cvar_headshots, OnCvarHeadshotsChange);
+	HookConVarChange(g_cvar_actions, OnCvarActionsChange);
 	HookConVarChange(g_cvar_locations, OnCvarLocationsChange);
 	HookConVarChange(g_cvar_ktraj, OnCvarKtrajChange);
+	
 	CreateConVar("superlogs_css_version", VERSION, NAME, FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
 		
 	hook_wstats();
@@ -240,13 +253,20 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 	// "attacker"      "short"         // user ID who killed
 	// "weapon"        "string"        // weapon name killer used 
 	// "headshot"      "bool"          // signals a headshot
+	// "dominated"    "short"        // did killer dominate victim with this kill
+	// "revenge"    "short"        // did killer get revenge on victim with this kill
 	
 	new victim   = GetClientOfUserId(GetEventInt(event, "userid"));
 	new attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
 	decl String: weapon[MAX_WEAPON_LEN];
 	GetEventString(event, "weapon", weapon, sizeof(weapon));
 	
-	if (g_logwstats && victim > 0 && attacker > 0)
+	if (attacker <= 0 || victim <= 0)
+	{
+		return;
+	}
+	
+	if (g_logwstats)
 	{
 		new weapon_index = get_weapon_index(weapon);
 		if (weapon_index > -1)
@@ -267,6 +287,18 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 	if (g_logktraj)
 	{
 		LogPSKillTraj(attacker, victim, weapon);
+	}
+	if (g_logactions)
+	{
+		// these are only in Orangebox CS:S. These properties won't exist on ep1 css and should eval to 0/false.
+		if (GetEventInt(event, "dominated"))
+		{
+			LogPlyrPlyrEvent(attacker, victim, "triggered", "domination");
+		}
+		else if (GetEventInt(event, "revenge"))
+		{
+			LogPlyrPlyrEvent(attacker, victim, "triggered", "revenge");
+		}
 	}
 }
 
@@ -304,7 +336,7 @@ public OnCvarWstatsChange(Handle:cvar, const String:oldVal[], const String:newVa
 		if (g_logwstats)
 		{
 			hook_wstats();
-			if (!g_logktraj)
+			if (!g_logktraj && !g_logactions)
 			{
 				HookEvent("player_death", Event_PlayerDeath);
 			}
@@ -312,7 +344,7 @@ public OnCvarWstatsChange(Handle:cvar, const String:oldVal[], const String:newVa
 		else
 		{
 			unhook_wstats();
-			if (!g_logktraj)
+			if (!g_logktraj && !g_logactions)
 			{
 				UnhookEvent("player_death", Event_PlayerDeath);
 			}
@@ -320,6 +352,23 @@ public OnCvarWstatsChange(Handle:cvar, const String:oldVal[], const String:newVa
 	}
 }
 
+public OnCvarActionsChange(Handle:cvar, const String:oldVal[], const String:newVal[])
+{
+	new bool:old_value = g_logactions;
+	g_logactions = GetConVarBool(g_cvar_actions);
+	
+	if (old_value != g_logactions)
+	{
+		if (g_logactions && !g_logktraj && !g_logwstats)
+		{
+			HookEvent("player_death", Event_PlayerDeath);
+		}
+		else if (!g_logktraj && !g_logwstats)
+		{
+			UnhookEvent("player_death", Event_PlayerDeath);
+		}
+	}
+}
 
 public OnCvarHeadshotsChange(Handle:cvar, const String:oldVal[], const String:newVal[])
 {
@@ -364,11 +413,11 @@ public OnCvarKtrajChange(Handle:cvar, const String:oldVal[], const String:newVal
 	
 	if (old_value != g_logktraj)
 	{
-		if (g_logktraj && !g_logwstats)
+		if (g_logktraj && !g_logwstats && !g_logactions)
 		{
 			HookEvent("player_death", Event_PlayerDeath);
 		}
-		else if (!g_logwstats)
+		else if (!g_logwstats && !g_logactions)
 		{
 			UnhookEvent("player_death", Event_PlayerDeath);
 		}
