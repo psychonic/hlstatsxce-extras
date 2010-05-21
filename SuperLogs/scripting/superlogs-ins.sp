@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: Insurgency"
-#define VERSION "1.1.0"
+#define VERSION "1.1.1"
 
 #define MAX_LOG_WEAPONS 19
 #define MAX_WEAPON_LEN 8
@@ -182,7 +182,13 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 	if (attacker > 0 && attacker != victim)
 	{
 		attacker = GetClientOfUserId(attacker);
+		
 		new hitgroup  = GetEventInt(event, "hitgroup");
+		if (hitgroup < 8)
+		{
+			hitgroup += LOG_HIT_OFFSET;
+		}
+		
 		if (g_logwstats)
 		{
 			decl String:weapon[MAX_WEAPON_LEN+PREFIX_LEN];
@@ -193,13 +199,8 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 			if (weapon_index > -1)  {
 				g_weapon_stats[attacker][weapon_index][LOG_HIT_HITS]++;
 				g_weapon_stats[attacker][weapon_index][LOG_HIT_DAMAGE]  += GetEventInt(event, "dmg_health");
-				if (hitgroup < 8) {
-					g_weapon_stats[attacker][weapon_index][hitgroup + LOG_HIT_OFFSET]++;
-				}
-				else
-				{
-					g_weapon_stats[attacker][weapon_index][hitgroup]++;
-				}
+				g_weapon_stats[attacker][weapon_index][hitgroup]++;
+				
 				if (hitgroup == HITGROUP_HEAD)
 				{
 					g_weapon_stats[attacker][weapon_index][LOG_HIT_HEADSHOTS]++;
