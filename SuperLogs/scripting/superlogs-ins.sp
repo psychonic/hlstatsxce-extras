@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: Insurgency"
-#define VERSION "1.1.1"
+#define VERSION "1.1.2"
 
 #define MAX_LOG_WEAPONS 19
 #define MAX_WEAPON_LEN 8
@@ -171,7 +171,7 @@ unhook_wstats()
 public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	//  "userid"		"short"		// user ID on server
-	//  "attacker"		"short"		// user ID on server of the attacker
+	//  "attacker"		"short"		// CLIENT INDEX! on server of the attacker
 	//  "dmg_health"		"short"		// lost health points
 	//  "hitgroup"		"short"			// Hit groups
 	//  "weapon"		"string"		// Weapon name, like WEAPON_AK47
@@ -181,13 +181,10 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 
 	if (attacker > 0 && attacker != victim)
 	{
-		attacker = GetClientOfUserId(attacker);
+		// ... wtf insurgency... userid is userid and attacker is client index?
+		//attacker = GetClientOfUserId(attacker);
 		
 		new hitgroup  = GetEventInt(event, "hitgroup");
-		if (hitgroup < 8)
-		{
-			hitgroup += LOG_HIT_OFFSET;
-		}
 		
 		if (g_logwstats)
 		{
@@ -199,7 +196,7 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 			if (weapon_index > -1)  {
 				g_weapon_stats[attacker][weapon_index][LOG_HIT_HITS]++;
 				g_weapon_stats[attacker][weapon_index][LOG_HIT_DAMAGE]  += GetEventInt(event, "dmg_health");
-				g_weapon_stats[attacker][weapon_index][hitgroup]++;
+				g_weapon_stats[attacker][weapon_index][hitgroup+LOG_HIT_OFFSET]++;
 				
 				if (hitgroup == HITGROUP_HEAD)
 				{
@@ -209,7 +206,7 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 				g_client_last_weaponstring[attacker] = weapon;
 			}
 		}
-	
+		
 		if (g_logheadshots && hitgroup == HITGROUP_HEAD)
 		{
 			LogPlayerEvent(attacker, "triggered", "headshot");
@@ -233,7 +230,12 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 
 	new victim   = GetClientOfUserId(GetEventInt(event, "userid"));
 	new attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
-	if (g_logwstats && victim > 0 && attacker > 0)
+	if (attacker == 0 || victim == 0 || attacker == victim)
+	{
+		return;
+	}
+	
+	if (g_logwstats)
 	{
 		new weapon_index = g_client_last_weapon[attacker];
 		if (weapon_index > -1)
@@ -247,6 +249,7 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 			dump_player_stats(victim);
 		}
 	}
+	
 	if (g_logktraj)
 	{
 		LogPSKillTraj(attacker, victim, g_client_last_weaponstring[attacker]);
