@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: DOD:S"
-#define VERSION "1.1.0"
+#define VERSION "1.1.1"
 
 #define MAX_LOG_WEAPONS    27
 #define IGNORE_SHOTS_START	20
@@ -152,6 +152,7 @@ hook_wstats()
 	HookEvent("dod_stats_weapon_attack", Event_PlayerShoot);
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("dod_round_win", Event_RoundEnd, EventHookMode_PostNoCopy);
+	HookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
 }
 
 unhook_wstats()
@@ -159,6 +160,7 @@ unhook_wstats()
 	UnhookEvent("dod_stats_weapon_attack", Event_PlayerShoot);
 	UnhookEvent("player_spawn", Event_PlayerSpawn);
 	UnhookEvent("dod_round_win", Event_RoundEnd, EventHookMode_PostNoCopy);
+	UnhookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
 }
 
 
@@ -287,6 +289,13 @@ public Event_PlayerSpawn(Handle:event, const String:name[], bool:dontBroadcast)
 public Event_RoundEnd(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	WstatsDumpAll();
+}
+
+public Action:Event_PlayerDisconnect(Handle:event, const String:name[], bool:dontBroadcast)
+{
+	new client = GetClientOfUserId(GetEventInt(event, "userid"));
+	OnPlayerDisconnect(client);
+	return Plugin_Continue;
 }
 
 

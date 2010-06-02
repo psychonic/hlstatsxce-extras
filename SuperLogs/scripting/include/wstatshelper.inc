@@ -128,8 +128,11 @@ WstatsDumpAll()
 	}
 }
 
-public OnClientDisconnect(client)
+OnPlayerDisconnect(client)
 {
-	dump_player_stats(client);
-	reset_player_stats(client);
+	if(IsClientInGame(client))
+	{
+		dump_player_stats(client);
+		reset_player_stats(client);
+	}
 }

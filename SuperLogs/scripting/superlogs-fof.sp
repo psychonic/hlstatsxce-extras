@@ -27,7 +27,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: FOF"
-#define VERSION "1.1.0"
+#define VERSION "1.1.1"
 
 #define MAX_LOG_WEAPONS 18
 #define MAX_WEAPON_LEN 16
@@ -118,6 +118,7 @@ hook_wstats()
 	HookEvent("player_hurt",  Event_PlayerHurt);
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("player_shoot",  Event_PlayerShoot);
+	HookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
 }
 
 
@@ -127,6 +128,7 @@ unhook_wstats()
 	UnhookEvent("player_hurt",  Event_PlayerHurt);
 	UnhookEvent("player_spawn", Event_PlayerSpawn);
 	UnhookEvent("player_shoot",  Event_PlayerShoot);
+	UnhookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
 }
 
 
@@ -262,6 +264,13 @@ public Event_RoundEnd(Handle:event, const String:name[], bool:dontBroadcast)
 			LogTeamEvent(team, "triggered", "Round_Win");
 		}
 	}
+}
+
+public Action:Event_PlayerDisconnect(Handle:event, const String:name[], bool:dontBroadcast)
+{
+	new client = GetClientOfUserId(GetEventInt(event, "userid"));
+	OnPlayerDisconnect(client);
+	return Plugin_Continue;
 }
 
 public Action:LogMap(Handle:timer)

@@ -27,7 +27,7 @@
 #undef REQUIRE_EXTENSIONS
 #tryinclude <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 
-#define VERSION "2.0.7"
+#define VERSION "2.0.8"
 #if defined _sdkhooks_included
 	#define NAME "SuperLogs: TF2"
 #else
@@ -286,6 +286,7 @@ public OnPluginStart()
 	HookEvent("player_death", Event_PlayerDeathPre, EventHookMode_Pre);
 	HookEvent("player_hurt", Event_PlayerHurt);
 	HookEvent("player_spawn", Event_PlayerSpawn);
+	HookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
 	HookEvent("post_inventory_application", Event_PostInventoryApplication);
 
 	HookEvent("arena_win_panel", Event_WinPanel);
@@ -509,13 +510,16 @@ public OnClientPutInServer(client)
 		playerLoadout[client][i] = {-1, -1};
 }
 
-public OnClientDisconnect(client)
+public Action:Event_PlayerDisconnect(Handle:event, const String:name[], bool:dontBroadcast)
 {
+	new client = GetClientOfUserId(GetEventInt(event, "userid"));
 	if(IsClientInGame(client))
 	{
 		if(b_wstats) DumpWeaponStats(client);
 		if(b_heals) DumpHeals(client, " (disconnect)");
 	}
+	
+	return Plugin_Continue;
 }
 
 #if defined _sdkhooks_included

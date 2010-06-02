@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: Insurgency"
-#define VERSION "1.1.2"
+#define VERSION "1.1.3"
 
 #define MAX_LOG_WEAPONS 19
 #define MAX_WEAPON_LEN 8
@@ -160,11 +160,13 @@ public OnMapStart()
 hook_wstats()
 {
 	HookEvent("player_spawn", Event_PlayerSpawn);
+	HookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
 }
 
 unhook_wstats()
 {
 	UnhookEvent("player_spawn", Event_PlayerSpawn);
+	UnhookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
 }
 
 
@@ -185,6 +187,10 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 		//attacker = GetClientOfUserId(attacker);
 		
 		new hitgroup  = GetEventInt(event, "hitgroup");
+		if (hitgroup < 8)
+		{
+			hitgroup += LOG_HIT_OFFSET;
+		}
 		
 		if (g_logwstats)
 		{
@@ -196,9 +202,9 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 			if (weapon_index > -1)  {
 				g_weapon_stats[attacker][weapon_index][LOG_HIT_HITS]++;
 				g_weapon_stats[attacker][weapon_index][LOG_HIT_DAMAGE]  += GetEventInt(event, "dmg_health");
-				g_weapon_stats[attacker][weapon_index][hitgroup+LOG_HIT_OFFSET]++;
+				g_weapon_stats[attacker][weapon_index][hitgroup]++;
 				
-				if (hitgroup == HITGROUP_HEAD)
+				if (hitgroup == (HITGROUP_HEAD+LOG_HIT_OFFSET))
 				{
 					g_weapon_stats[attacker][weapon_index][LOG_HIT_HEADSHOTS]++;
 				}
@@ -207,7 +213,7 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 			}
 		}
 		
-		if (g_logheadshots && hitgroup == HITGROUP_HEAD)
+		if (g_logheadshots && hitgroup == (HITGROUP_HEAD+LOG_HIT_OFFSET))
 		{
 			LogPlayerEvent(attacker, "triggered", "headshot");
 		}
@@ -278,6 +284,13 @@ public Event_RoundEnd(Handle:event, const String:name[], bool:dontBroadcast)
 	{
 		LogTeamEvent(GetEventInt(event, "winner"), "triggered", "Round_Win");
 	}
+}
+
+public Action:Event_PlayerDisconnect(Handle:event, const String:name[], bool:dontBroadcast)
+{
+	new client = GetClientOfUserId(GetEventInt(event, "userid"));
+	OnPlayerDisconnect(client);
+	return Plugin_Continue;
 }
 
 

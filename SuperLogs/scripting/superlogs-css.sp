@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: CSS"
-#define VERSION "1.2.0"
+#define VERSION "1.2.1"
 
 #define MAX_LOG_WEAPONS 28
 #define IGNORE_SHOTS_START 25
@@ -164,6 +164,7 @@ hook_wstats()
 	HookEvent("player_hurt", Event_PlayerHurt);
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
+	HookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
 }
 
 unhook_wstats()
@@ -172,6 +173,7 @@ unhook_wstats()
 	UnhookEvent("player_hurt", Event_PlayerHurt);
 	UnhookEvent("player_spawn", Event_PlayerSpawn);
 	UnhookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
+	UnhookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
 }
 
 
@@ -316,6 +318,13 @@ public Event_PlayerSpawn(Handle:event, const String:name[], bool:dontBroadcast)
 public Event_RoundEnd(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	WstatsDumpAll();
+}
+
+public Action:Event_PlayerDisconnect(Handle:event, const String:name[], bool:dontBroadcast)
+{
+	new client = GetClientOfUserId(GetEventInt(event, "userid"));
+	OnPlayerDisconnect(client);
+	return Plugin_Continue;
 }
 
 
