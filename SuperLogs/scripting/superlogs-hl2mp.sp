@@ -26,7 +26,7 @@
 #include <sdkhooks>
 
 #define NAME "SuperLogs: HL2MP"
-#define VERSION "1.1.1"
+#define VERSION "1.1.2"
 
 #define MAX_LOG_WEAPONS 6
 #define MAX_WEAPON_LEN 14
@@ -67,7 +67,7 @@ new Handle:g_hBoltChecks = INVALID_HANDLE;
 public Plugin:myinfo = {
 	name = NAME,
 	author = "psychonic",
-	description = "Advanced logging for HL2MP. Generates auxilary logging for use with log parsers such as HLstatsX and Psychostats",
+	description = "Advanced logging for HL2DM & Sourceforts. Generates auxilary logging for use with log parsers such as HLstatsX and Psychostats",
 	version = VERSION,
 	url = "http://www.hlxcommunity.com"
 };
@@ -78,15 +78,15 @@ public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
 public bool:AskPluginLoad(Handle:myself, bool:late, String:error[], err_max)
 #endif
 {
-	new String:szGameDesc[64];
+	decl String:szGameDesc[64];
 	GetGameDescription(szGameDesc, sizeof(szGameDesc), true);
-	if (StrContains(szGameDesc, "Half-Life 2 Deathmatch", false) == -1)
+	if (StrContains(szGameDesc, "Half-Life 2 Deathmatch", false) == -1 && StrContains(szGameDesc, "SourceForts", false) == -1)
 	{
-		new String:szGameDir[64];
+		decl String:szGameDir[64];
 		GetGameFolderName(szGameDir, sizeof(szGameDir));
-		if (StrContains(szGameDir, "hl2mp", false) == -1)
+		if (StrContains(szGameDir, "hl2mp", false) == -1 && StrContains(szGameDir, "sourceforts", false) == -1)
 		{
-			strcopy(error, err_max, "This plugin is only supported on HL2MP");
+			strcopy(error, err_max, "This plugin is only supported on HL2MP & SourceForts");
 			#if SOURCEMOD_V_MAJOR >= 1 && SOURCEMOD_V_MINOR >= 3
 				return APLRes_Failure;
 			#else
