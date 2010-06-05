@@ -130,7 +130,7 @@ WstatsDumpAll()
 
 OnPlayerDisconnect(client)
 {
-	if(IsClientInGame(client))
+	if(client > 0 && IsClientInGame(client))
 	{
 		dump_player_stats(client);
 		reset_player_stats(client);
