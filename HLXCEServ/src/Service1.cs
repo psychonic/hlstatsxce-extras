@@ -105,48 +105,49 @@ namespace HLXCEServ
         }
         void HLXCE_Exited(object sender, EventArgs e)
         {
-            if (g_iDaemonCount > 1)
+            if (g_iDaemonCount <= 1)
             {
-                for (ushort i = 0; i < g_iDaemonCount; i++)
-                {
-                    if (sender.Equals(g_lprDaemons[i]))
-                    {
-                        if (++g_liDaemonRetries[i] > g_iMaxRetries)
-                        {
-                            int iRemainingDaemons = 0;
-                            for (ushort j = 0; j < g_iDaemonCount; j++)
-                            {
-                                if (!g_lprDaemons[j].HasExited)
-                                {
-                                    iRemainingDaemons++;
-                                }
-                            }
-                            if (iRemainingDaemons > 0)
-							{
-								string strEvMsg = String.Format("HLXCE Daemon on port {0:d} has exited unexpectedly with no retries left. {1:d} of {2:d} daemons still active.", g_iStartPort + i, iRemainingDaemons, g_iDaemonCount);
-								DoWarning(strEvMsg);
-							}
-							else
-							{
-								DoError("All daemons have failed; exiting.");
-								this.Stop();
-							}
-                        }
-                        else
-                        {
-                            string strEvMsg = String.Format("HLXCE Daemon on port {0:d} has exited unexpectedly. {1:d} retries left.", g_iStartPort + i, g_iMaxRetries - g_liDaemonRetries[i]);
-					DoWarning(strEvMsg);
-                            SetupStartDaemon(i, true);
-                        }
-                    }
-                }
-            }
-            else
-            {
-                DoError("HLXCE Daemon has exited unexpectedly");
+				DoError("HLXCE Daemon has exited unexpectedly");
 				this.Stop();
-            }
-        }
+				return;
+			}
+             
+			for (ushort i = 0; i < g_iDaemonCount; i++)
+			{
+				if (!sender.Equals(g_lprDaemons[i]))
+				{
+					continue;
+				}
+                     
+				if (++g_liDaemonRetries[i] > g_iMaxRetries)
+				{
+					int iRemainingDaemons = 0;
+					for (ushort j = 0; j < g_iDaemonCount; j++)
+					{
+						if (!g_lprDaemons[j].HasExited)
+						{
+							iRemainingDaemons++;
+						}
+					}
+					if (iRemainingDaemons > 0)
+					{
+						string strEvMsg = String.Format("HLXCE Daemon on port {0:d} has exited unexpectedly with no retries left. {1:d} of {2:d} daemons still active.", g_iStartPort + i, iRemainingDaemons, g_iDaemonCount);
+						DoWarning(strEvMsg);
+					}
+					else
+					{
+						DoError("All daemons have failed; exiting.");
+						this.Stop();
+					}
+				}
+				else
+				{
+					string strEvMsg = String.Format("HLXCE Daemon on port {0:d} has exited unexpectedly. {1:d} retries left.", g_iStartPort + i, g_iMaxRetries - g_liDaemonRetries[i]);
+					DoWarning(strEvMsg);
+					SetupStartDaemon(i, true);
+				}
+			}
+		}
 
         private void ExceptionFail(Exception ex)
         {
