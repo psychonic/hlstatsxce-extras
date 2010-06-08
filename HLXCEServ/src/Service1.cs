@@ -26,11 +26,11 @@ namespace HLXCEServ
 
         protected override void OnStart(string[] args)
         {
-            g_strHLXCEPath = ConfigurationSettings.AppSettings["HLXCEPath"];
-            g_strPerlPath = ConfigurationSettings.AppSettings["PerlPath"];
-            g_iDaemonCount = Convert.ToUInt16(ConfigurationSettings.AppSettings["DaemonCount"]);
-            g_iStartPort = Convert.ToUInt16(ConfigurationSettings.AppSettings["StartPort"]);
-            g_iMaxRetries = Convert.ToUInt32(ConfigurationSettings.AppSettings["RetryCount"]);
+            g_strHLXCEPath = ConfigurationManager.AppSettings["HLXCEPath"];
+			g_strPerlPath = ConfigurationManager.AppSettings["PerlPath"];
+			g_iDaemonCount = Convert.ToUInt16(ConfigurationManager.AppSettings["DaemonCount"]);
+			g_iStartPort = Convert.ToUInt16(ConfigurationManager.AppSettings["StartPort"]);
+			g_iMaxRetries = Convert.ToUInt32(ConfigurationManager.AppSettings["RetryCount"]);
             g_lprDaemons = new List<Process>(g_iDaemonCount);
             g_lswLogFiles = new List<StreamWriter>(g_iDaemonCount);
             g_liDaemonRetries = new List<uint>(g_iDaemonCount);
