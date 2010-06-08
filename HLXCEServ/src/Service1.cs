@@ -194,6 +194,7 @@ namespace HLXCEServ
             g_lprDaemons[iDaemonId].StartInfo.UseShellExecute = false;
             g_lprDaemons[iDaemonId].StartInfo.RedirectStandardOutput = true;
             g_lprDaemons[iDaemonId].StartInfo.RedirectStandardError = true;
+			g_lprDaemons[iDaemonId].ErrorDataReceived += new DataReceivedEventHandler(HLXCE_OutputReceived);
             g_lprDaemons[iDaemonId].OutputDataReceived += new DataReceivedEventHandler(HLXCE_OutputReceived);
             g_lprDaemons[iDaemonId].EnableRaisingEvents = true;
             g_lprDaemons[iDaemonId].Exited += new EventHandler(HLXCE_Exited);
