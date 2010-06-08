@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Mail;
 using System.ServiceProcess;
 
 namespace HLXCEServ
@@ -24,6 +25,9 @@ namespace HLXCEServ
         List<StreamWriter> g_lswLogFiles;
         List<uint> g_liDaemonRetries;
 
+		SmtpClient g_Mailer;
+		ushort g_iNotifyLvl = 0;
+
         protected override void OnStart(string[] args)
         {
             g_strHLXCEPath = ConfigurationManager.AppSettings["HLXCEPath"];
@@ -34,6 +38,11 @@ namespace HLXCEServ
             g_lprDaemons = new List<Process>(g_iDaemonCount);
             g_lswLogFiles = new List<StreamWriter>(g_iDaemonCount);
             g_liDaemonRetries = new List<uint>(g_iDaemonCount);
+			g_iNotifyLvl = Convert.ToUInt16(ConfigurationManager.AppSettings["EmailNotificationLvl"]);
+			if (g_iNotifyLvl > 0)
+			{
+				SetupEmail();
+			}
 
             for (ushort i = 0; i < g_iDaemonCount; i++)
             {
@@ -52,7 +61,7 @@ namespace HLXCEServ
                 }
                 catch (Exception ex)
                 {
-                    EventLog.WriteEntry(ex.Message, EventLogEntryType.Error);
+                    DoError(ex.Message);
                     this.Stop();
                 }
             }
@@ -113,20 +122,20 @@ namespace HLXCEServ
                                 }
                             }
                             if (iRemainingDaemons > 0)
-                            {
-                                string strEvMsg = String.Format("HLXCE Daemon on port {0:d} has exited unexpectedly with no retries left. {1:d} of {2:d} daemons still active.", g_iStartPort + i, iRemainingDaemons, g_iDaemonCount);
-                                EventLog.WriteEntry(strEvMsg, EventLogEntryType.Warning);
-                            }
-                            else
-                            {
-                                EventLog.WriteEntry("All daemons have failed; exiting.", EventLogEntryType.Error);
-                                this.Stop();
-                            }
+							{
+								string strEvMsg = String.Format("HLXCE Daemon on port {0:d} has exited unexpectedly with no retries left. {1:d} of {2:d} daemons still active.", g_iStartPort + i, iRemainingDaemons, g_iDaemonCount);
+								DoWarning(strEvMsg);
+							}
+							else
+							{
+								DoError("All daemons have failed; exiting.");
+								this.Stop();
+							}
                         }
                         else
                         {
                             string strEvMsg = String.Format("HLXCE Daemon on port {0:d} has exited unexpectedly. {1:d} retries left.", g_iStartPort + i, g_iMaxRetries - g_liDaemonRetries[i]);
-                            EventLog.WriteEntry(strEvMsg, EventLogEntryType.Warning);
+					DoWarning(strEvMsg);
                             SetupStartDaemon(i, true);
                         }
                     }
@@ -134,14 +143,14 @@ namespace HLXCEServ
             }
             else
             {
-                EventLog.WriteEntry("HLXCE Daemon has exited unexpectedly", EventLogEntryType.Error);
-                this.Stop();
+                DoError("HLXCE Daemon has exited unexpectedly");
+				this.Stop();
             }
         }
 
         private void ExceptionFail(Exception ex)
         {
-            EventLog.WriteEntry(ex.Message, EventLogEntryType.Error);
+            DoError(ex.Message);
             this.Stop();
         }
 
@@ -199,5 +208,34 @@ namespace HLXCEServ
                 ExceptionFail(ex);
             }
         }
+
+		private void SetupEmail()
+		{
+			string username = ConfigurationManager.AppSettings["EmailUsername"];
+			string password = ConfigurationManager.AppSettings["EmailPassword"];
+			g_Mailer = new SmtpClient(ConfigurationManager.AppSettings["EmailHost"], Convert.ToInt32(ConfigurationManager.AppSettings["EmailPort"]));
+			if (g_Mailer != null && username != "" && password != "")
+			{
+				g_Mailer.Credentials = new System.Net.NetworkCredential(username, password);
+			}
+		}
+
+		private void DoWarning(string message)
+		{
+			EventLog.WriteEntry(message, EventLogEntryType.Warning);
+			if (g_Mailer != null && g_iNotifyLvl >= 2)
+			{
+				g_Mailer.Send(new MailMessage(ConfigurationManager.AppSettings["EmailFrom"], ConfigurationManager.AppSettings["EmailTo"], "HLXCEServ Warning", "Warning from HLXCEServ:\n\n" + message + "\n"));
+			}
+		}
+
+		private void DoError(string message)
+		{
+			EventLog.WriteEntry(message, EventLogEntryType.Error);
+			if (g_Mailer != null && g_iNotifyLvl >= 1)
+			{
+				g_Mailer.Send(new MailMessage(ConfigurationManager.AppSettings["EmailFrom"], ConfigurationManager.AppSettings["EmailTo"], "HLXCEServ Error", "Error from HLXCEServ:\n\n" + message + "\n"));
+			}
+		}
     }
 }
