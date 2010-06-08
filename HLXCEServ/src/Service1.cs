@@ -20,6 +20,7 @@ namespace HLXCEServ
         ushort g_iDaemonCount;
         ushort g_iStartPort;
         uint g_iMaxRetries;
+		ProcessPriorityClass g_priority;
 
         List<Process> g_lprDaemons;
         List<StreamWriter> g_lswLogFiles;
@@ -38,6 +39,7 @@ namespace HLXCEServ
             g_lprDaemons = new List<Process>(g_iDaemonCount);
             g_lswLogFiles = new List<StreamWriter>(g_iDaemonCount);
             g_liDaemonRetries = new List<uint>(g_iDaemonCount);
+			g_priority = GetPriorityFromString(ConfigurationManager.AppSettings["Priority"]);
 			g_iNotifyLvl = Convert.ToUInt16(ConfigurationManager.AppSettings["EmailNotificationLvl"]);
 			if (g_iNotifyLvl > 0)
 			{
@@ -204,6 +206,7 @@ namespace HLXCEServ
                 g_lprDaemons[iDaemonId].Start();
                 g_lprDaemons[iDaemonId].BeginOutputReadLine();
                 g_lprDaemons[iDaemonId].BeginErrorReadLine();
+				g_lprDaemons[iDaemonId].PriorityClass = g_priority;
             }
             catch (Exception ex)
             {
@@ -238,6 +241,25 @@ namespace HLXCEServ
 			{
 				g_Mailer.Send(new MailMessage(ConfigurationManager.AppSettings["EmailFrom"], ConfigurationManager.AppSettings["EmailTo"], "HLXCEServ Error", "Error from HLXCEServ:\n\n" + message + "\n"));
 			}
+		}
+
+		private ProcessPriorityClass GetPriorityFromString(string sPriority)
+		{
+			sPriority = sPriority.ToLower();
+			switch (sPriority)
+			{
+				case "idle":
+					return ProcessPriorityClass.Idle;
+				case "belownormal":
+					return ProcessPriorityClass.BelowNormal;
+				case "abovenormal":
+					return ProcessPriorityClass.AboveNormal;
+				case "high":
+					return ProcessPriorityClass.High;
+				case "realtime":
+					return ProcessPriorityClass.RealTime;
+			}
+			return ProcessPriorityClass.Normal;
 		}
     }
 }
