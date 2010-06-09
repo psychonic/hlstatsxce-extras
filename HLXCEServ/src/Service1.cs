@@ -21,6 +21,7 @@ namespace HLXCEServ
         ushort g_iStartPort;
         uint g_iMaxRetries;
 		ProcessPriorityClass g_priority;
+		bool g_bStartProxy;
 
         List<Process> g_lprDaemons;
         List<StreamWriter> g_lswLogFiles;
@@ -41,6 +42,9 @@ namespace HLXCEServ
             g_liDaemonRetries = new List<uint>(g_iDaemonCount);
 			g_priority = GetPriorityFromString(ConfigurationManager.AppSettings["Priority"]);
 			g_iNotifyLvl = Convert.ToUInt16(ConfigurationManager.AppSettings["EmailNotificationLvl"]);
+			string proxstart = ConfigurationManager.AppSettings["StartProxy"];
+			g_bStartProxy = (proxstart == "yes" || proxstart == "1");
+
 			if (g_iNotifyLvl > 0)
 			{
 				SetupEmail();
@@ -105,6 +109,11 @@ namespace HLXCEServ
                 }
             }
         }
+		void HLXCE_ProxyExited(object sender, EventArgs e)
+		{
+			DoError("Proxy is no longer running; exiting.");
+			this.Stop();
+		}
         void HLXCE_Exited(object sender, EventArgs e)
         {
             if (g_iDaemonCount <= 1)
@@ -189,6 +198,20 @@ namespace HLXCEServ
             {
                 ExceptionFail(ex);
             }
+
+			if (g_bStartProxy)
+			{
+				g_lprDaemons[iDaemonId] = new Process();
+				g_lprDaemons[iDaemonId].StartInfo.FileName = g_strPerlPath + @"\perl.exe";
+				g_lprDaemons[iDaemonId].StartInfo.Arguments = g_strHLXCEPath + @"\hlstats-proxy.pl";
+				g_lprDaemons[iDaemonId].StartInfo.WorkingDirectory = g_strHLXCEPath;
+				g_lprDaemons[iDaemonId].StartInfo.CreateNoWindow = true;
+				g_lprDaemons[iDaemonId].StartInfo.UseShellExecute = false;
+				g_lprDaemons[iDaemonId].EnableRaisingEvents = true;
+				g_lprDaemons[iDaemonId].Exited += new EventHandler(HLXCE_ProxyExited);
+				g_lprDaemons[iDaemonId].Start();
+				g_lprDaemons[iDaemonId].PriorityClass = g_priority;
+			}
 
             g_lprDaemons[iDaemonId] = new Process();
             g_lprDaemons[iDaemonId].StartInfo.FileName = g_strPerlPath + @"\perl.exe";
