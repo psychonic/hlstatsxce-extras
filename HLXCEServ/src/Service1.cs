@@ -148,6 +148,7 @@ namespace HLXCEServ
 					DoWarning(strEvMsg);
 					SetupStartDaemon(i, true);
 				}
+				break;
 			}
 		}
 
