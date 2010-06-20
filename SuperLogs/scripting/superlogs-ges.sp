@@ -151,7 +151,7 @@ unhook_wstats()
 	UnhookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
 }
 
-public OnClientPutInServer()
+public OnClientPutInServer(client)
 {
 	reset_player_stats(client);
 }
