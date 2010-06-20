@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: GES"
-#define VERSION "1.1.1"
+#define VERSION "1.1.2"
 
 #define MAX_LOG_WEAPONS 18
 #define MAX_WEAPON_LEN 13
@@ -149,6 +149,11 @@ unhook_wstats()
 	UnhookEvent("player_shoot",  Event_PlayerShoot);
 	UnhookEvent("player_spawn", Event_PlayerSpawn);
 	UnhookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
+}
+
+public OnClientPutInServer()
+{
+	reset_player_stats(client);
 }
 
 

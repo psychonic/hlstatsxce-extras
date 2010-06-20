@@ -27,7 +27,7 @@
 #include <sdkhooks>
 
 #define NAME "SuperLogs: ZPS"
-#define VERSION "1.1.1"
+#define VERSION "1.1.2"
 
 #define MAX_LOG_WEAPONS 11
 #define MAX_WEAPON_LEN 12
@@ -149,6 +149,7 @@ public OnClientPutInServer(client)
 	SDKHook(client, SDKHook_FireBulletsPost, OnFireBullets);
 	SDKHook(client, SDKHook_TraceAttackPost, OnTraceAttack);
 	SDKHook(client, SDKHook_OnTakeDamagePost, OnTakeDamage);
+	reset_player_stats(client);
 }
 
 public OnFireBullets(attacker, shots, String:weaponname[])

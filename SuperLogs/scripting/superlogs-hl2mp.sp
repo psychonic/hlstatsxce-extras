@@ -26,7 +26,7 @@
 #include <sdkhooks>
 
 #define NAME "SuperLogs: HL2MP"
-#define VERSION "1.1.2"
+#define VERSION "1.1.3"
 
 #define MAX_LOG_WEAPONS 6
 #define MAX_WEAPON_LEN 14
@@ -163,6 +163,7 @@ public OnClientPutInServer(client)
 	SDKHook(client, SDKHook_FireBulletsPost, OnFireBullets);
 	SDKHook(client, SDKHook_TraceAttackPost, OnTraceAttack);
 	SDKHook(client, SDKHook_OnTakeDamagePost, OnTakeDamage);
+	reset_player_stats(client);
 }
 
 public OnEntityCreated(entity, const String:classname[])

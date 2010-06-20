@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: L4D"
-#define VERSION "1.3.1"
+#define VERSION "1.3.2"
 
 #define MAX_LOG_WEAPONS 27
 #define MAX_WEAPON_LEN 16
@@ -224,6 +224,11 @@ unhook_wstats()
 	UnhookEvent("player_spawn", Event_PlayerSpawn);
 	UnhookEvent("round_end_message", Event_RoundEnd, EventHookMode_PostNoCopy);
 	UnhookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
+}
+
+public OnClientPutInServer(client)
+{
+	reset_player_stats(client);
 }
 
 

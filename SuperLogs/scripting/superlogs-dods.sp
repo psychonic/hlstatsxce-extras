@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: DOD:S"
-#define VERSION "1.1.1"
+#define VERSION "1.1.2"
 
 #define MAX_LOG_WEAPONS    27
 #define IGNORE_SHOTS_START	20
@@ -161,6 +161,11 @@ unhook_wstats()
 	UnhookEvent("player_spawn", Event_PlayerSpawn);
 	UnhookEvent("dod_round_win", Event_RoundEnd, EventHookMode_PostNoCopy);
 	UnhookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
+}
+
+public OnClientPutInServer(client)
+{
+	reset_player_stats(client);
 }
 
 

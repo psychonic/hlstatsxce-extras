@@ -27,7 +27,7 @@
 #undef REQUIRE_EXTENSIONS
 #tryinclude <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 
-#define VERSION "2.0.8"
+#define VERSION "2.0.9"
 #if defined _sdkhooks_included
 	#define NAME "SuperLogs: TF2"
 #else
@@ -508,12 +508,13 @@ public OnClientPutInServer(client)
 	healPoints[client] = 0;
 	for(new i = 0; i < MAX_LOADOUT_SLOTS; i++)
 		playerLoadout[client][i] = {-1, -1};
+	ResetWeaponStats(client);
 }
 
 public Action:Event_PlayerDisconnect(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new client = GetClientOfUserId(GetEventInt(event, "userid"));
-	if(IsClientInGame(client))
+	if(client > 0 && IsClientInGame(client))
 	{
 		if(b_wstats) DumpWeaponStats(client);
 		if(b_heals) DumpHeals(client, " (disconnect)");

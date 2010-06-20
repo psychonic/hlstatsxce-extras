@@ -27,7 +27,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: FOF"
-#define VERSION "1.1.1"
+#define VERSION "1.1.2"
 
 #define MAX_LOG_WEAPONS 18
 #define MAX_WEAPON_LEN 16
@@ -129,6 +129,11 @@ unhook_wstats()
 	UnhookEvent("player_spawn", Event_PlayerSpawn);
 	UnhookEvent("player_shoot",  Event_PlayerShoot);
 	UnhookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
+}
+
+public OnClientPutInServer(client)
+{
+	reset_player_stats(client);
 }
 
 

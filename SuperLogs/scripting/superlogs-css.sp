@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: CSS"
-#define VERSION "1.2.1"
+#define VERSION "1.2.2"
 
 #define MAX_LOG_WEAPONS 28
 #define IGNORE_SHOTS_START 25
@@ -174,6 +174,11 @@ unhook_wstats()
 	UnhookEvent("player_spawn", Event_PlayerSpawn);
 	UnhookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 	UnhookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
+}
+
+public OnClientPutInServer(client)
+{
+	reset_player_stats(client);
 }
 
 
