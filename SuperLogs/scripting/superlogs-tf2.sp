@@ -27,7 +27,7 @@
 #undef REQUIRE_EXTENSIONS
 #tryinclude <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 
-#define VERSION "2.0.9"
+#define VERSION "2.0.10"
 #if defined _sdkhooks_included
 	#define NAME "SuperLogs: TF2"
 #else
@@ -236,7 +236,7 @@ public OnPluginStart()
 	cvar_teleports_again = CreateConVar("superlogs_teleports_again", "1", "Repeated use of same teleporter in 10 seconds adds _again to event (default on)", 0, true, 0.0, true, 1.0);
 	cvar_headshots = CreateConVar("superlogs_headshots", "0", "Enable logging of headshot player action (default off)", 0, true, 0.0, true, 1.0);
 	cvar_backstabs = CreateConVar("superlogs_backstabs", "1", "Enable logging of backstab player action (default on)", 0, true, 0.0, true, 1.0);
-	cvar_sandvich = CreateConVar("superlogs_sandvich", "0", "Enable logging of sandvich eating (may be resource intensive) (default off)", 0, true, 0.0, true, 1.0);
+	cvar_sandvich = CreateConVar("superlogs_sandvich", "1", "Enable logging of sandvich eating (default on)", 0, true, 0.0, true, 1.0);
 	cvar_fire = CreateConVar("superlogs_fire", "1", "Enable logging of fiery arrows as a separate weapon from regular arrows (default on)", 0, true, 0.0, true, 1.0);
 	cvar_wstats = CreateConVar("superlogs_wstats", "1", "Enable logging of weapon stats (default on, only works when tf_weapon_criticals is 1)", 0, true, 0.0, true, 1.0);
 	cvar_heals = CreateConVar("superlogs_heals", "1", "Enable logging of healpoints upon death (default on)", 0, true, 0.0, true, 1.0);
