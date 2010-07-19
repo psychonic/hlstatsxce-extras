@@ -27,7 +27,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: FOF"
-#define VERSION "1.1.2"
+#define VERSION "3.0"
 
 #define MAX_LOG_WEAPONS 18
 #define MAX_WEAPON_LEN 16
@@ -56,13 +56,9 @@ new const String:g_weapon_list[MAX_LOG_WEAPONS][MAX_WEAPON_LEN] = {
 								};
 								
 new Handle:g_cvar_wstats = INVALID_HANDLE;
-new Handle:g_cvar_headshots = INVALID_HANDLE;
-new Handle:g_cvar_locations = INVALID_HANDLE;
 new Handle:g_cvar_actions = INVALID_HANDLE;
 
 new bool:g_logwstats = true;
-new bool:g_logheadshots = true;
-new bool:g_loglocations = true;
 new bool:g_logactions = true;
 
 #include <loghelper>
@@ -83,16 +79,11 @@ public OnPluginStart()
 	CreatePopulateWeaponTrie();
 	
 	g_cvar_wstats = CreateConVar("superlogs_wstats", "1", "Enable logging of weapon stats (default on)", 0, true, 0.0, true, 1.0);
-	g_cvar_headshots = CreateConVar("superlogs_headshots", "1", "Enable logging of headshot player action (default on)", 0, true, 0.0, true, 1.0);
-	g_cvar_locations = CreateConVar("superlogs_locations", "1", "Enable logging of location on player death if kill logging is enabled (default on)", 0, true, 0.0, true, 1.0);
 	g_cvar_actions = CreateConVar("superlogs_actions", "1", "Enable logging of actions, such as Round_Win (default on)", 0, true, 0.0, true, 1.0);
 	HookConVarChange(g_cvar_wstats, OnCvarWstatsChange);
-	HookConVarChange(g_cvar_headshots, OnCvarHeadshotsChange);
-	HookConVarChange(g_cvar_locations, OnCvarLocationsChange);
 	HookConVarChange(g_cvar_actions, OnCvarActionsChange);
 				
 	CreateConVar("superlogs_fof_version", VERSION, NAME, FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
-	HookEvent("player_death", Event_PlayerDeathPre, EventHookMode_Pre);
 	HookEvent("round_end", Event_RoundEnd);
 	hook_wstats();
 	
@@ -191,23 +182,6 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 	}
 }
 
-
-public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontBroadcast)
-{
-	new attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
-	
-	if (g_loglocations)
-	{
-		LogKillLoc(attacker, GetClientOfUserId(GetEventInt(event, "userid")));
-	}
-	
-	if (g_logheadshots && GetEventBool(event, "headshot"))
-	{
-		LogPlayerEvent(attacker, "triggered", "headshot");
-	}
-	
-	return Plugin_Continue;
-}
 
 public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 {
@@ -311,43 +285,6 @@ public OnCvarWstatsChange(Handle:cvar, const String:oldVal[], const String:newVa
 	}
 }
 
-
-public OnCvarHeadshotsChange(Handle:cvar, const String:oldVal[], const String:newVal[])
-{
-	new bool:old_value = g_logheadshots;
-	g_logheadshots = GetConVarBool(g_cvar_headshots);
-	
-	if (old_value != g_logheadshots)
-	{
-		if (g_logheadshots && !g_loglocations)
-		{
-			HookEvent("player_death", Event_PlayerDeathPre, EventHookMode_Pre);
-		}
-		else if (!g_loglocations)
-		{
-			UnhookEvent("player_death", Event_PlayerDeathPre, EventHookMode_Pre);
-		}
-	}
-}
-
-
-public OnCvarLocationsChange(Handle:cvar, const String:oldVal[], const String:newVal[])
-{
-	new bool:old_value = g_loglocations;
-	g_loglocations = GetConVarBool(g_cvar_locations);
-	
-	if (old_value != g_loglocations)
-	{
-		if (g_loglocations && !g_logheadshots)
-		{
-			HookEvent("player_death", Event_PlayerDeathPre, EventHookMode_Pre);
-		}
-		else if (!g_logheadshots)
-		{
-			UnhookEvent("player_death", Event_PlayerDeathPre, EventHookMode_Pre);
-		}
-	}
-}
 
 public OnCvarActionsChange(Handle:cvar, const String:oldVal[], const String:newVal[])
 {
