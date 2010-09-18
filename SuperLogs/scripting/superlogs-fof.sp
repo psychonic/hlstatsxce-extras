@@ -27,10 +27,10 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: FOF"
-#define VERSION "3.0"
+#define VERSION "3.1"
 
-#define MAX_LOG_WEAPONS 18
-#define MAX_WEAPON_LEN 16
+#define MAX_LOG_WEAPONS 17
+#define MAX_WEAPON_LEN 15
 
 
 new g_weapon_stats[MAXPLAYERS+1][MAX_LOG_WEAPONS][15];
@@ -48,18 +48,11 @@ new const String:g_weapon_list[MAX_LOG_WEAPONS][MAX_WEAPON_LEN] = {
 									"bow",
 									"sharps",
 									"deringer",
-									"explosive_arrow",
 									"arrow_fiery",
 									"coltnavy2",
 									"deringer2",
 									"peacemaker2"
 								};
-								
-new Handle:g_cvar_wstats = INVALID_HANDLE;
-new Handle:g_cvar_actions = INVALID_HANDLE;
-
-new bool:g_logwstats = true;
-new bool:g_logactions = true;
 
 #include <loghelper>
 #include <wstatshelper>
@@ -77,24 +70,19 @@ public Plugin:myinfo = {
 public OnPluginStart()
 {
 	CreatePopulateWeaponTrie();
-	
-	g_cvar_wstats = CreateConVar("superlogs_wstats", "1", "Enable logging of weapon stats (default on)", 0, true, 0.0, true, 1.0);
-	g_cvar_actions = CreateConVar("superlogs_actions", "1", "Enable logging of actions, such as Round_Win (default on)", 0, true, 0.0, true, 1.0);
-	HookConVarChange(g_cvar_wstats, OnCvarWstatsChange);
-	HookConVarChange(g_cvar_actions, OnCvarActionsChange);
 				
 	CreateConVar("superlogs_fof_version", VERSION, NAME, FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
-	HookEvent("round_end", Event_RoundEnd);
-	hook_wstats();
-	
-	if (g_logwstats)
-	{
-		hook_wstats();
-	}
 		
 	CreateTimer(1.0, LogMap);
 	
 	GetTeams();
+	
+	HookEvent("player_death", Event_PlayerDeath);
+	HookEvent("player_hurt",  Event_PlayerHurt);
+	HookEvent("player_spawn", Event_PlayerSpawn);
+	HookEvent("player_shoot",  Event_PlayerShoot);
+	HookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
+	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 }
 
 
@@ -103,24 +91,6 @@ public OnMapStart()
 	GetTeams();
 }
 
-hook_wstats()
-{
-	HookEvent("player_death", Event_PlayerDeath);
-	HookEvent("player_hurt",  Event_PlayerHurt);
-	HookEvent("player_spawn", Event_PlayerSpawn);
-	HookEvent("player_shoot",  Event_PlayerShoot);
-	HookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
-}
-
-
-unhook_wstats()
-{
-	HookEvent("player_death", Event_PlayerDeath);
-	UnhookEvent("player_hurt",  Event_PlayerHurt);
-	UnhookEvent("player_spawn", Event_PlayerSpawn);
-	UnhookEvent("player_shoot",  Event_PlayerShoot);
-	UnhookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
-}
 
 public OnClientPutInServer(client)
 {
@@ -135,15 +105,24 @@ public Event_PlayerShoot(Handle:event, const String:name[], bool:dontBroadcast)
 	//	"mode" "local" // weapon mode 0 normal 1 ironsighted 2 fanning
 
 	new attacker = GetClientOfUserId(GetEventInt(event, "userid"));
-	if (attacker > 0)
+	if (attacker > 0 && attacker <= MaxClients)
 	{
 		decl String: weapon[MAX_WEAPON_LEN];
 		GetEventString(event, "weapon", weapon, sizeof(weapon));
+		
 		new weapon_index = get_weapon_index(weapon[7]);
-		if (weapon_index > -1)
+		if (weapon_index == -1)
 		{
-			g_weapon_stats[attacker][weapon_index][LOG_HIT_SHOTS]++;
+			return;
 		}
+		
+		new shots = GetEventInt(event, "pellets");
+		if (shots == 0)
+		{
+			shots = 1;
+		}
+		
+		g_weapon_stats[attacker][weapon_index][LOG_HIT_SHOTS] += shots;
 	}
 }
 
@@ -160,24 +139,27 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 	
 	new attacker  = GetClientOfUserId(GetEventInt(event, "attacker"));
 	
-	if (attacker > 0)
+	if (attacker > 0 && attacker <= MaxClients)
 	{
 		decl String: weapon[MAX_WEAPON_LEN];
 		GetEventString(event, "weapon", weapon, sizeof(weapon));
+		
 		new weapon_index = get_weapon_index(weapon[7]);
-		if (weapon_index > -1)
+		if (weapon_index == -1)
 		{
-			g_weapon_stats[attacker][weapon_index][LOG_HIT_HITS]++;
-			g_weapon_stats[attacker][weapon_index][LOG_HIT_DAMAGE]  += GetEventInt(event, "damage");
-			new hitgroup  = GetEventInt(event, "hitgroup");
-			if (hitgroup < 8)
-			{
-				g_weapon_stats[attacker][weapon_index][hitgroup + LOG_HIT_OFFSET]++;
-			}
-			else
-			{
-				g_weapon_stats[attacker][weapon_index][hitgroup]++;
-			}
+			return;
+		}
+		
+		g_weapon_stats[attacker][weapon_index][LOG_HIT_HITS]++;
+		g_weapon_stats[attacker][weapon_index][LOG_HIT_DAMAGE]  += GetEventInt(event, "damage");
+		new hitgroup  = GetEventInt(event, "hitgroup");
+		if (hitgroup < 8)
+		{
+			g_weapon_stats[attacker][weapon_index][hitgroup + LOG_HIT_OFFSET]++;
+		}
+		else
+		{
+			g_weapon_stats[attacker][weapon_index][hitgroup]++;
 		}
 	}
 }
@@ -193,28 +175,32 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 	new victim   = GetClientOfUserId(GetEventInt(event, "userid"));
 	new attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
 	
-	if (g_logwstats && victim > 0 && attacker > 0)
+	if (victim > 0 && attacker > 0 && attacker <= MaxClients)
 	{
 		decl String: weapon[MAX_WEAPON_LEN];
 		GetEventString(event, "weapon", weapon, sizeof(weapon));
-		if (g_logwstats)
+		
+		new weapon_index = get_weapon_index(weapon[7]);
+		if (weapon_index == -1)
 		{
-			new weapon_index = get_weapon_index(weapon[7]);
-			if (weapon_index > -1)
-			{
-				g_weapon_stats[attacker][weapon_index][LOG_HIT_KILLS]++;
-				if (GetEventBool(event, "headshot"))
-				{
-					g_weapon_stats[attacker][weapon_index][LOG_HIT_HEADSHOTS]++;
-				}
-				g_weapon_stats[victim][weapon_index][LOG_HIT_DEATHS]++;
-				if ( GetClientTeam(attacker) == GetClientTeam(victim))
-				{
-					g_weapon_stats[attacker][weapon_index][LOG_HIT_TEAMKILLS]++;
-				}
-				dump_player_stats(victim);
-			}
+			return;
 		}
+		
+		if ( GetClientTeam(attacker) == GetClientTeam(victim))
+		{
+			g_weapon_stats[attacker][weapon_index][LOG_HIT_TEAMKILLS]++;
+			return;
+		}
+		
+		g_weapon_stats[attacker][weapon_index][LOG_HIT_KILLS]++;
+		g_weapon_stats[victim][weapon_index][LOG_HIT_DEATHS]++;
+		
+		if (GetEventBool(event, "headshot"))
+		{
+			g_weapon_stats[attacker][weapon_index][LOG_HIT_HEADSHOTS]++;
+		}
+		
+		dump_player_stats(victim);
 	}
 }
 
@@ -231,18 +217,7 @@ public Event_PlayerSpawn(Handle:event, const String:name[], bool:dontBroadcast)
 
 public Event_RoundEnd(Handle:event, const String:name[], bool:dontBroadcast)
 {
-	if (g_logwstats)
-	{
-		WstatsDumpAll();
-	}
-	if (g_logactions)
-	{
-		new team = GetEventInt(event, "TWinner");
-		if (team == 2 || team == 3)
-		{
-			LogTeamEvent(team, "triggered", "Round_Win");
-		}
-	}
+	WstatsDumpAll();
 }
 
 public Action:Event_PlayerDisconnect(Handle:event, const String:name[], bool:dontBroadcast)
@@ -256,50 +231,4 @@ public Action:LogMap(Handle:timer)
 {
 	// Called 1 second after OnPluginStart since srcds does not log the first map loaded. Idea from Stormtrooper's "mapfix.sp" for psychostats
 	LogMapLoad();
-}
-
-
-public OnCvarWstatsChange(Handle:cvar, const String:oldVal[], const String:newVal[])
-{
-	new bool:old_value = g_logwstats;
-	g_logwstats = GetConVarBool(g_cvar_wstats);
-	
-	if (old_value != g_logwstats)
-	{
-		if (g_logwstats)
-		{
-			hook_wstats();
-			if (!g_logactions)
-			{
-				HookEvent("round_end", Event_RoundEnd);
-			}
-		}
-		else
-		{
-			unhook_wstats();
-			if (!g_logactions)
-			{
-				UnhookEvent("round_end", Event_RoundEnd);
-			}
-		}
-	}
-}
-
-
-public OnCvarActionsChange(Handle:cvar, const String:oldVal[], const String:newVal[])
-{
-	new bool:old_value = g_logactions;
-	g_logactions = GetConVarBool(g_cvar_actions);
-	
-	if (old_value != g_logactions)
-	{
-		if (g_logactions && !g_logwstats)
-		{
-			HookEvent("round_end", Event_RoundEnd);
-		}
-		else if (!g_logwstats)
-		{
-			UnhookEvent("round_end", Event_RoundEnd);
-		}
-	}
 }
