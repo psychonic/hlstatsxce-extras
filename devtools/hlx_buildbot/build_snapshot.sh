@@ -162,7 +162,12 @@ if [ ${BUILD_DEV} == 1 ]; then
 	zip -r ${OUTPUT_DEV}/${PKG_PREFIX}${SNAPSHOT_COUNTER}.zip * > /dev/null
 	echo -ne "[+] Packages created\\n\\n"
 
+	echo -ne "[+] Cleaning up old packages\\n\\n"
+	cd ${OUTPUT_DEV}
+	rm -f `ls -t | tail -n +11`
+
 	echo -ne "[+] Build for #${SNAPSHOT_COUNTER} complete.\\n\\n\\n"
+
 	SNAPSHOT_COUNTER=$((SNAPSHOT_COUNTER+1))
 fi
 
@@ -246,6 +251,10 @@ if [ ${BUILD_STABLE} == 1 ]; then
 	echo -ne " [+] Creating ZIP package\\n"
 	zip -r ${OUTPUT_STABLE}/${PKG_PREFIX}${SNAPSHOT_COUNTER}.zip * > /dev/null
 	echo -ne "[+] Packages created\\n\\n"
+
+	echo -ne "[+] Cleaning up old packages\\n\\n"
+        cd ${OUTPUT_STABLE}
+        rm -f `ls -t | tail -n +11`
 
 	echo -ne "[+] Build for #${SNAPSHOT_COUNTER} complete.\\n"
 	SNAPSHOT_COUNTER=$((SNAPSHOT_COUNTER+0001))
