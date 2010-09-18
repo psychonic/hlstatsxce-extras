@@ -1,18 +1,20 @@
 #include <sourcemod>
 #include <loghelper>
- 
+
+#define VERSION "2.2"
+
 public Plugin:myinfo =
 {
         name = "SuperLogs: CSpromod",
-        author = "NeoCortex",
+        author = "NeoCortex, psychonic",
         description = "Rewrites the logs from CSProMod so HLStatsX:CE will understand them",
-        version = "2.1",
+        version = VERSION,
         url = "http://www.sourcemod.net/"
 };
  
 public OnPluginStart()
 {
-	CreateConVar("superlogs_cspromod_version", "2.1", "SuperLogs: CSpromod", FCVAR_NOTIFY);
+	CreateConVar("superlogs_cspromod_version", VERSION, "SuperLogs: CSpromod", FCVAR_NOTIFY);
 	
 	HookEvent("player_death", Event_PlayerDeath)
 	HookEvent("player_connect", Event_PlayerConnect)
@@ -94,6 +96,12 @@ public Event_RoundStart(Handle:event, const String:name[], bool:dontBroadcast)
 
 public Event_RoundEnd(Handle:event, const String:name[], bool:dontBroadcast)
 {
+	new winner = GetEventInt(event, "winner");
+	if (winner == 2 || winner == 3)
+	{
+		LogTeamEvent(winner, "triggered", "Round_Win");
+	}
+	
 	LogToGame("World triggered \"Round_End\"");
 }
 
