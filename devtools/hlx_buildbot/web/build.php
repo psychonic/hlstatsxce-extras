@@ -23,10 +23,8 @@
 
 	<form action="build.php" method="post">
 		<label for="release_number">Release Number: </label>
-		<select name="release_number">
-			<option value="1.7.0" selected>1.7.0</option>
-			<option value="1.6.9">1.6.9</option>
-		</select><br /><br />
+		<input type="text" name="release_number" value="1.6.10">
+		<br /><br />
 		<label for="repository">Repository: </label>
 		<select name="repository">
 			<option value="hlx-dev" selected>Development Branch</option>
@@ -34,6 +32,8 @@
 		</select><br /><br />
 		<label for="upgrade_rev">Upgrade Tag/Rev: </label>
 		<input type="text" name="upgrade_rev" /><br /><br />
+		<label for="test_only">Test only (ignore verioning errors): </label>
+		<input type="checkbox" name="test_only" value="test_only" /><br /><br />
 		<input type="hidden" name="form_submitted" value="1" />
 		<input type="submit" value="Start Build" />
 	</form>
@@ -54,10 +54,19 @@ if (isset($_POST['form_submitted']) && ($_POST['form_submitted'] == 1))
 	{
 		$upgrade_rev = escapeshellarg($_POST['upgrade_rev']);
 	}
+
+	if (isset($_POST['test_only']))
+	{
+		$test_only = 1;
+	}
+	else
+	{
+		$test_only = 0;
+	}
 ?>
 	<textarea id="shell_output">
 <?php	
-	passthru("/usr/bin/sudo -u hg /home/hg/hlx_buildbot/build_release.sh $repository $release_number $upgrade_rev");
+	passthru("/usr/bin/sudo -u hg /home/hg/hlx_buildbot/build_release.sh $repository $release_number $upgrade_rev $test_only");
 ?>
 	</textarea>
 <?php

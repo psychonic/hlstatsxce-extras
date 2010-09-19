@@ -71,6 +71,7 @@ CURRENT_DIR=`pwd`
 REPOSITORY=$1
 RELEASE_NUMBER=$2
 UPGRADE_REV=$3
+TEST_ONLY=$4
 
 # Check if the necessary arguments were passed
 if [[ -n "${REPOSITORY}" && -n "${RELEASE_NUMBER}" ]]; then
@@ -113,7 +114,7 @@ if [[ -n "${REPOSITORY}" && -n "${RELEASE_NUMBER}" ]]; then
 
 	# Check that version numbers have been rolled up
 	# install.sql
-	grep -q "'version', '${RELEASE_NUMBER}'" ${BUILD_LOCATION}/sql/install.sql 
+	grep -q "@VERSION=\"${RELEASE_NUMBER}\"" ${BUILD_LOCATION}/sql/install.sql 
 	if [ $? -eq 1 ]; then
 		echo ""
 		echo " [!] WARNING: Version number ${RELEASE_NUMBER} not found in install.sql."
@@ -146,8 +147,10 @@ if [[ -n "${REPOSITORY}" && -n "${RELEASE_NUMBER}" ]]; then
 		WRONG_VERSION_NUMBER=1
         fi
 
-	if [ ${WRONG_VERSION_NUMBER} -eq 1 ]; then
+	if [ ${WRONG_VERSION_NUMBER} -eq 1 -a ${TEST_ONLY} -eq 0 ]; then
 		echo "[!] Terminating Build due to invalid versioning."
+		echo "[!] Removing temporary build files."
+		rm -Rf ${BUILD_LOCATION}
 		exit
 	fi
 
