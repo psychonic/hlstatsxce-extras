@@ -16,6 +16,8 @@ else
 
 switch ($project) {
 	case "hlstatsxcommunity":
+		$build_dev = 0;
+		$build_stable = 0;
 		$data = file_get_contents("php://input");
 		$rev_data = json_decode($data);
 		$repository = $rev_data->repository_path;
