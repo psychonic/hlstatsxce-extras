@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: CSS"
-#define VERSION "1.2.2"
+#define VERSION "1.2.3"
 
 #define MAX_LOG_WEAPONS 28
 #define IGNORE_SHOTS_START 25
@@ -144,6 +144,7 @@ public OnPluginStart()
 	CreateConVar("superlogs_css_version", VERSION, NAME, FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
 		
 	hook_wstats();
+	hook_actions();
 	HookEvent("player_death", Event_PlayerDeathPre, EventHookMode_Pre);
 	HookEvent("player_death", Event_PlayerDeath);
 		
@@ -174,6 +175,16 @@ unhook_wstats()
 	UnhookEvent("player_spawn", Event_PlayerSpawn);
 	UnhookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
 	UnhookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
+}
+
+hook_actions()
+{
+	HookEvent("round_mvp", Event_RoundMVP);
+}
+
+unhook_actions()
+{
+	UnhookEvent("round_mvp", Event_RoundMVP);
 }
 
 public OnClientPutInServer(client)
@@ -325,6 +336,11 @@ public Event_RoundEnd(Handle:event, const String:name[], bool:dontBroadcast)
 	WstatsDumpAll();
 }
 
+public Event_RoundMVP(Handle:event, const String:name[], bool:dontBroadcast)
+{
+	LogPlayerEvent(GetClientOfUserId(GetEventInt(event, "userid")), "triggered", "round_mvp");
+}
+
 public Action:Event_PlayerDisconnect(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new client = GetClientOfUserId(GetEventInt(event, "userid"));
@@ -373,13 +389,21 @@ public OnCvarActionsChange(Handle:cvar, const String:oldVal[], const String:newV
 	
 	if (old_value != g_logactions)
 	{
-		if (g_logactions && !g_logktraj && !g_logwstats)
+		if (g_logactions)
 		{
-			HookEvent("player_death", Event_PlayerDeath);
+			hook_actions();
+			if (!g_logktraj && !g_logwstats)
+			{
+				HookEvent("player_death", Event_PlayerDeath);
+			}
 		}
-		else if (!g_logktraj && !g_logwstats)
+		else
 		{
-			UnhookEvent("player_death", Event_PlayerDeath);
+			unhook_actions();
+			if (!g_logktraj && !g_logwstats)
+			{
+				UnhookEvent("player_death", Event_PlayerDeath);
+			}
 		}
 	}
 }

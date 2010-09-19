@@ -85,7 +85,9 @@ namespace HLXCEServ
                 if (!g_lprDaemons[i].HasExited)
                 {
                     g_lprDaemons[i].EnableRaisingEvents = false;
-                    g_lprDaemons[i].Kill();
+                    //g_lprDaemons[i].Kill();
+                    g_lprDaemons[i].CloseMainWindow();
+                    g_lprDaemons[i].WaitForExit();
                 }
                 if (g_lswLogFiles[i] != null)
                 {
