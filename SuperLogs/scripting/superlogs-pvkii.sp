@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: PVKII"
-#define VERSION "1.0.0"
+#define VERSION "1.0.1"
 
 #define MAX_LOG_WEAPONS 6
 #define MAX_WEAPON_LEN 14
@@ -47,6 +47,19 @@ new bool:g_logktraj = true;
 
 new bool:g_bHasChest[MAXPLAYERS+1] = {false,...};
 new bool:g_bHasGrail[MAXPLAYERS+1] = {false,...};
+
+new g_iLastClass = -1;
+
+new const String:g_szClassNames[][] = {
+	"Skirmisher",
+	"Captain",
+	"",
+	"Berserker",
+	"Huscarl",
+	"Gestir",
+	"Heavy Knight",
+	"Archer"
+};
 
 #define PVKII
 
@@ -125,6 +138,7 @@ public OnMapStart()
 
 public OnClientPutInServer(client)
 {
+	g_iLastClass = -1;
 	reset_player_stats(client);
 	g_bHasChest[client] = false;
 	g_bHasGrail[client] = false;
@@ -259,6 +273,15 @@ public Event_PlayerSpawn(Handle:event, const String:name[], bool:dontBroadcast)
 	if (client > 0)
 	{
 		reset_player_stats(client);
+		if (IsClientInGame(client))
+		{
+			new iCurrentClass = GetEntProp(client, Prop_Send, "m_iPlayerClass");
+			if (iCurrentClass > -1 && iCurrentClass != g_iLastClass)
+			{
+				LogRoleChange(client, g_szClassNames[iCurrentClass]);
+			}
+			g_iLastClass = iCurrentClass;
+		}
 	}
 }
 
