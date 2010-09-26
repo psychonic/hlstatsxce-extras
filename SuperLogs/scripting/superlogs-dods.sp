@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: DOD:S"
-#define VERSION "1.1.2"
+#define VERSION "1.1.3"
 
 #define MAX_LOG_WEAPONS    27
 #define IGNORE_SHOTS_START	20
@@ -68,6 +68,7 @@ new Handle:g_cvar_wstats = INVALID_HANDLE;
 new Handle:g_cvar_headshots = INVALID_HANDLE;
 new Handle:g_cvar_locations = INVALID_HANDLE;
 new Handle:g_cvar_ktraj = INVALID_HANDLE;
+new Handle:g_cvar_version = INVALID_HANDLE;
 
 new bool:g_logwstats = true;
 new bool:g_logheadshots = true;
@@ -128,7 +129,7 @@ public OnPluginStart()
 	HookConVarChange(g_cvar_headshots, OnCvarHeadshotsChange);
 	HookConVarChange(g_cvar_locations, OnCvarLocationsChange);
 	HookConVarChange(g_cvar_ktraj, OnCvarKtrajChange);
-	CreateConVar("superlogs_dods_version", VERSION, NAME, FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
+	g_cvar_version = CreateConVar("superlogs_dods_version", VERSION, NAME, FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
 		
 	hook_wstats();
 	HookEvent("player_hurt", Event_PlayerHurt);
@@ -144,6 +145,14 @@ public OnPluginStart()
 public OnMapStart()
 {
 	GetTeams();
+}
+
+
+public OnConfigsExecuted()
+{
+	decl String:version[255];
+	GetConVarString(g_cvar_version, version, sizeof(version));
+	SetConVarString(g_cvar_version, version);
 }
 
 
