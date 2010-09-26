@@ -26,8 +26,9 @@
 #include <loghelper> // http://forums.alliedmods.net/showthread.php?t=100084
 #undef REQUIRE_EXTENSIONS
 #include <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
+#define REQUIRE_EXTENSIONS
 
-#define VERSION "2.0.10"
+#define VERSION "2.0.11"
 #define NAME "SuperLogs: TF2"
 
 #define UNLOCKABLE_BIT (1<<30)
@@ -44,6 +45,7 @@
 #define OBJ_TELEPORTER_EXIT 2
 #define OBJ_SENTRYGUN 3
 #define OBJ_ATTACHMENT_SAPPER 4
+#define OBJ_SENTRYGUN_MINI 20
 #define WEAPONID_PLAYER 0
 #define WEAPONID_MEDICSAW 11
 #define WEAPONID_ROCKET 22
@@ -144,6 +146,11 @@ new Float:dalokohs[MAXPLAYERS+1];
 // Last known class of players
 // Likely less intensive to keep track of this for sound hooks
 new TFClassType:playerClass[MAXPLAYERS+1];
+
+// Is player carrying a building
+new bool:g_bCarryingObject[MAXPLAYERS+1] = {false,...};
+new g_iCarryingOffs = -1;
+new bool:g_bBlockLog = false;
 
 // Bullet Weapons Variable
 new bulletWeapons = 0;
@@ -271,6 +278,10 @@ public OnPluginStart()
 	// Hook Events
 	HookEvent("player_death", Event_PlayerDeath);
 	HookEvent("player_death", Event_PlayerDeathPre, EventHookMode_Pre);
+	HookEvent("object_destroyed", Event_ObjectDestroyed);
+	HookEvent("object_destroyed", Event_ObjectDestroyedPre, EventHookMode_Pre);
+	HookEvent("player_builtobject", Event_PlayerBuiltObject);
+	HookEvent("player_builtobject", Event_PlayerBuiltObjectPre, EventHookMode_Pre);
 	HookEvent("player_hurt", Event_PlayerHurt);
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
@@ -278,11 +289,15 @@ public OnPluginStart()
 
 	HookEvent("arena_win_panel", Event_WinPanel);
 	HookEvent("teamplay_win_panel", Event_WinPanel);
+	
+	g_iCarryingOffs = FindSendPropInfo("CTFPlayer", "m_bCarryingObject");
 
 	//AutoExecConfig(); // Create/request load of config file
 	AutoExecConfig(false); // Dont auto-make, but load if you find it.
 
 	CreateTimer(1.0, LogMap);
+	
+	AddGameLogHook(OnGameLog);
 }
 
 public OnMapStart()
@@ -334,6 +349,14 @@ public OnEntityCreated(entity, const String:className[])
 	{
 		PushStackCell(h_wearables, EntIndexToEntRef(entity));
 	}
+}
+
+public Action:OnGameLog(const String:message[])
+{
+	if (g_bBlockLog)
+		return Plugin_Handled;
+	
+	return Plugin_Continue;
 }
 
 public Action:OnTakeDamage(victim, &attacker, &inflictor, &Float:damage, &damagetype)
@@ -470,8 +493,14 @@ public OnGameFrame()
 			}
 		}
 	}
+	
+	new cnt = GetClientCount();
+	for (new i = 1; i <= cnt; i++)
+	{
+		if (GetEntData(i, g_iCarryingOffs, 1))
+			g_bCarryingObject[i] = true;
+	}
 }
-#endif
 
 public OnClientPutInServer(client)
 {
@@ -481,6 +510,8 @@ public OnClientPutInServer(client)
 		SDKHook(client, SDKHook_OnTakeDamage, OnTakeDamage);
 	}
 	playerLoadoutUpdated[client] = true;
+	
+	g_bCarryingObject[client] = false;
 	
 	for(new i = 0; i <= MaxClients; i++)
 	{
@@ -557,6 +588,8 @@ public Event_PlayerSpawn(Handle:event, const String:name[], bool:dontBroadcast)
 					objname = "OBJ_SENTRYGUN";
 				case OBJ_ATTACHMENT_SAPPER:
 					objname = "OBJ_ATTACHMENT_SAPPER";
+				case OBJ_SENTRYGUN_MINI:
+					objname = "OBJ_SENTRYGUN_MINI";
 				default:
 					continue;
 			}
@@ -603,7 +636,13 @@ public Event_ObjectRemoved(Handle:event, const String:name[], bool:dontBroadcast
 		while(PopStack(h_objList[client]))
 			continue;
 	}
-	PushStackCell(h_objList[client], GetEventInt(event, "objecttype"));
+	new objtype = GetEventInt(event, "objecttype");
+	new objindex = GetEventInt(event, "index");
+	if (IsValidEdict(objindex) && GetEntProp(GetEventInt(event, "index"), Prop_Send, "m_bMiniBuilding", 1))
+	{
+		objtype = OBJ_SENTRYGUN_MINI;
+	}
+	PushStackCell(h_objList[client], objtype);
 }
 
 public Event_PlayerStealsandvich(Handle:event, const String:name[], bool:dontBroadcast)
@@ -729,6 +768,53 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 	}
 }
 
+public Event_ObjectDestroyedPre(Handle:event, const String:name[], bool:dontBroadcast)
+{
+	if (GetEntProp(GetEventInt(event, "index"), Prop_Send, "m_bMiniBuilding", 1))
+	{
+		g_bBlockLog = true;
+	}
+}
+
+public Event_ObjectDestroyed(Handle:event, const String:name[], bool:dontBroadcast)
+{
+	if (g_bBlockLog)
+	{
+		g_bBlockLog = false;
+		decl String:weapon[64];
+		decl String:team[64];
+		decl String:auth[32];
+		decl String:properties[255];
+		GetEventString(event, "weapon", weapon, sizeof(weapon));
+		new victim = GetClientOfUserId(GetEventInt(event, "userid"));
+		GetClientAuthString(victim, auth, sizeof(auth));
+		GetTeamName(GetClientTeam(victim), team, sizeof(team));
+		Format(properties, sizeof(properties), " (object \"OBJ_SENTRYGUN_MINI\") (weapon \"%s\") (objectowner \"%N<%d><%s><%s>\")");
+		LogPlayerEvent(GetEventInt(event, "attacker"), "triggered", "killedobject", true, properties);
+	}
+}
+
+public Event_PlayerBuiltObjectPre(Handle:event, const String:name[], bool:dontBroadcast)
+{
+	if (g_bCarryingObject[GetClientOfUserId(GetEventInt(event, "userid"))] || GetEntProp(GetEventInt(event, "index"), Prop_Send, "m_bMiniBuilding", 1))
+	{
+		g_bBlockLog = true;
+	}
+}
+
+public Event_PlayerBuiltObject(Handle:event, const String:name[], bool:dontBroadcast)
+{
+	if (g_bBlockLog)
+	{
+		g_bBlockLog = false;
+		new client = GetClientOfUserId(GetEventInt(event, "userid"));
+		if (!g_bCarryingObject[client] && GetEntProp(GetEventInt(event, "index"), Prop_Send, "m_bMiniBuilding", 1))
+		{
+			LogPlayerEvent(client, "triggered", "builtobject", true, " (object \"OBJ_SENTRYGUN_MINI\")");
+		}
+	}
+}
+
 public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new death_flags = GetEventInt(event, "death_flags");
@@ -741,6 +827,7 @@ public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 		if(b_heals && playerClass[client] != TFClass_Medic) // medic_death event handles this for dead medics
 			DumpHeals(client);
 		jumpStatus[client] = JUMP_NONE; // Not jumping
+		g_bCarryingObject[client] = false;
 		if(b_actions)
 		{
 			if(attacker == client && customkill == 6)
@@ -813,22 +900,46 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 	{
 		case 1:
 			if(b_headshots)
+			{
 				LogPlyrPlyrEvent(attacker, victim, "triggered", "headshot");
+				return Plugin_Continue;
+			}
 		case 2:
 			if(b_backstabs)
+			{
 				LogPlyrPlyrEvent(attacker, victim, "triggered", "backstab");
+				return Plugin_Continue;
+			}
 		case 17, 18:
 			if(b_fire)
 			{
 				decl String:logweapon[64];
 				GetEventString(event, "weapon_logclassname", logweapon, sizeof(logweapon));
 				if(logweapon[0] != 'd') // No changing reflects - was 'r' but it is deflects
+				{
 					SetEventString(event, "weapon_logclassname", "tf_projectile_arrow_fire");
+					return Plugin_Continue;
+				}
 			}
 		case 29:
 			if(GetEventInt(event, "weaponid") == WEAPONID_MEDICSAW)
+			{
 				SetEventString(event, "weapon_logclassname", "taunt_medic");
+				return Plugin_Continue;
+			}
 	}
+	
+	new inflictor = GetEventInt(event, "inflictor_entindex");
+	if (inflictor > MaxClients && IsValidEdict(inflictor))
+	{
+		decl String:clsname[64];
+		GetEdictClassname(inflictor, clsname, sizeof(clsname));
+		if (!strcmp(clsname, "obj_sentrygun") && GetEntProp(inflictor, Prop_Send, "m_bMiniBuilding", 1))
+		{
+			SetEventString(event, "weapon_logclassname", "obj_sentrygun_mini");
+		}
+	}
+	
 	return Plugin_Continue;
 }
 
