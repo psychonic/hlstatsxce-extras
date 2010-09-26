@@ -25,14 +25,11 @@
 #include <tf2_stocks> // NOTE: Gives us tf2 AND sdktools
 #include <loghelper> // http://forums.alliedmods.net/showthread.php?t=100084
 #undef REQUIRE_EXTENSIONS
-#tryinclude <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
+#include <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 
 #define VERSION "2.0.10"
-#if defined _sdkhooks_included
-	#define NAME "SuperLogs: TF2"
-#else
-	#define NAME "SuperLogs: TF2 (No SDKHooks Support)"
-#endif
+#define NAME "SuperLogs: TF2"
+
 #define UNLOCKABLE_BIT (1<<30)
 #define MAX_LOG_WEAPONS 28
 #define MAX_WEAPON_LEN 29
@@ -112,9 +109,7 @@ new bool:b_rolelogfix;
 new bool:b_objlogfix;
 
 // Monitoring outside libraries/cvars
-#if defined _sdkhooks_included
 new bool:b_sdkhookloaded = false;
-#endif
 
 // Weapon trie
 new Handle:h_weapontrie;
@@ -123,23 +118,19 @@ new weaponStats[MAXPLAYERS+1][MAX_LOG_WEAPONS][7];
 new nextHurt[MAXPLAYERS+1] = {-1, ...};
 // Loadout Info
 new playerLoadout[MAXPLAYERS+1][MAX_LOADOUT_SLOTS][2];
-#if defined _sdkhooks_included
 new bool:playerLoadoutUpdated[MAXPLAYERS+1];
 new Handle:itemsKv;
 new Handle:slotsTrie;
 // Stunball id (so we aren't looking it up in gameframe)
 new stunBallId = -1;
-#endif
 // Stacks for "object destroyed at spawn"
 new Handle:h_objList[MAXPLAYERS+1];
 // Time storage for the same
 new Float:f_objRemoved[MAXPLAYERS+1];
-#if defined _sdkhooks_included
 // Stunball Stack
 new Handle:h_stunBalls;
 // Wearables Stack
 new Handle:h_wearables;
-#endif
 
 // Teleporter Stat-Padding Fix: Keep track of last use of teleporter
 new Float:f_lastTeleport[MAXPLAYERS+1][MAXPLAYERS+1];
@@ -218,13 +209,11 @@ new const String:weaponUnlockables[MAX_UNLOCKABLE_WEAPONS][MAX_WEAPON_LEN] = {
 	"tf_projectile_rocket"
 };
 
-#if defined _sdkhooks_included
 public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
 {
 	MarkNativeAsOptional("SDKHook"); // This needs to be marked optional for a number of reasons
 	return APLRes_Success;
 }
-#endif
 
 public OnPluginStart()
 {
@@ -256,7 +245,6 @@ public OnPluginStart()
 	HookConVarChange(cvar_rolelogfix,OnConVarRolelogfixChange);
 	HookConVarChange(cvar_objlogfix,OnConVarObjlogfixChange);
 
-#if defined _sdkhooks_included
 	h_stunBalls = CreateStack();
 	h_wearables = CreateStack();
 	itemsKv = CreateKeyValues("items_game");
@@ -271,7 +259,6 @@ public OnPluginStart()
 	SetTrieValue(slotsTrie, "building", 5);
 	SetTrieValue(slotsTrie, "head", 6);
 	SetTrieValue(slotsTrie, "misc", 7);
-#endif
 
 	// Populate the Weapon Trie
 	// Creates it too, technically
@@ -332,7 +319,6 @@ public Action:TF2_CalcIsAttackCritical(attacker, weapon, String:weaponname[], &b
 	}
 }
 
-#if defined _sdkhooks_included
 public OnAllPluginsLoaded()
 {
 	b_sdkhookloaded = GetExtensionFileStatus("sdkhooks.ext") == 1;
@@ -489,14 +475,13 @@ public OnGameFrame()
 
 public OnClientPutInServer(client)
 {
-#if defined _sdkhooks_included
 	if (b_sdkhookloaded)
 	{
 		SDKHook(client, SDKHook_OnTakeDamagePost, OnTakeDamage_Post);
 		SDKHook(client, SDKHook_OnTakeDamage, OnTakeDamage);
 	}
 	playerLoadoutUpdated[client] = true;
-#endif
+	
 	for(new i = 0; i <= MaxClients; i++)
 	{
 		// Clear both "we built" (client first) and "we used" (i first)
@@ -523,7 +508,6 @@ public Action:Event_PlayerDisconnect(Handle:event, const String:name[], bool:don
 	return Plugin_Continue;
 }
 
-#if defined _sdkhooks_included
 HookAllClients()
 {
 	for (new i = 1; i <= MaxClients; i++)
@@ -533,7 +517,6 @@ HookAllClients()
 			SDKHook(i, SDKHook_OnTakeDamage, OnTakeDamage);
 		}
 }
-#endif
 
 public Action:Event_PlayerChangeclassPre(Handle:event, const String:name[], bool:dontBroadcast)
 {
@@ -700,9 +683,7 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	// NOTE: The weaponid in this event is the weapon the player is HOLDING as of the event happening
 	// Thus, only if we don't have SDK Hooks do we use it for airshot detection.
-#if defined _sdkhooks_included
 	if(!b_sdkhookloaded)
-#endif
 	{
 		new attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
 		if(b_wstats)
@@ -902,64 +883,54 @@ public Event_ObjectDeflected(Handle:event, const String:name[], bool:dontBroadca
 		case WEAPONID_ARROW:
 		{
 			LogPlyrPlyrEvent(client, owner, "triggered", "deflected_arrow", true);
-#if defined _sdkhooks_included
 			if(b_wstats && b_sdkhookloaded)
 			{
 				new weapon_index = GetWeaponIndex("deflect_arrow");
 				if(weapon_index > -1)
 					weaponStats[client][weapon_index][LOG_SHOTS]++;
 			}
-#endif
 		}
 		case WEAPONID_FLARE:
 		{
 			LogPlyrPlyrEvent(client, owner, "triggered", "deflected_flare", true);
-#if defined _sdkhooks_included
 			if(b_wstats && b_sdkhookloaded)
 			{
 				new weapon_index = GetWeaponIndex("deflect_flare");
 				if(weapon_index > -1)
 					weaponStats[client][weapon_index][LOG_SHOTS]++;
 			}
-#endif
 		}
 		case WEAPONID_JAR:
 			LogPlyrPlyrEvent(client, owner, "triggered", "deflected_jarate", true);
 		case WEAPONID_ROCKET:
 		{
 			LogPlyrPlyrEvent(client, owner, "triggered", "deflected_rocket", true);
-#if defined _sdkhooks_included
 			if(b_wstats && b_sdkhookloaded)
 			{
 				new weapon_index = GetWeaponIndex("deflect_rocket");
 				if(weapon_index > -1)
 					weaponStats[client][weapon_index][LOG_SHOTS]++;
 			}
-#endif
 		}
 		case WEAPONID_DIRECTHIT:
 		{
 			LogPlyrPlyrEvent(client, owner, "triggered", "deflected_rocket_dh", true);
-#if defined _sdkhooks_included
 			if(b_wstats && b_sdkhookloaded)
 			{
 				new weapon_index = GetWeaponIndex("deflect_rocket");
 				if(weapon_index > -1)
 					weaponStats[client][weapon_index][LOG_SHOTS]++;
 			}
-#endif
 		}
 		case WEAPONID_PIPEBOMB:
 		{
 			LogPlyrPlyrEvent(client, owner, "triggered", "deflected_pipebomb", true);
-#if defined _sdkhooks_included
 			if(b_wstats && b_sdkhookloaded)
 			{
 				new weapon_index = GetWeaponIndex("deflect_promode");
 				if(weapon_index > -1)
 					weaponStats[client][weapon_index][LOG_SHOTS]++;
 			}
-#endif
 		}
 		case WEAPONID_BASEBALL:
 			LogPlyrPlyrEvent(client, owner, "triggered", "deflected_baseball", true);
@@ -981,9 +952,7 @@ public Action:CheckPlayerLoadout(Handle:timer, any:userid)
 	
 	new ent = -1;
 	new bool:newLoadout = false;
-#if defined _sdkhooks_included
 	new TFClassType:pClass = playerClass[client];
-#endif
 	for(new checkslot = 0; checkslot <=5; checkslot++)
 	{
 		if(playerLoadout[client][checkslot][1] != 0 && IsValidEntity(playerLoadout[client][checkslot][1]))
@@ -994,13 +963,11 @@ public Action:CheckPlayerLoadout(Handle:timer, any:userid)
 		if(ent == -1)
 		{
 			// Nothing in slot?
-#if defined _sdkhooks_included
 			if(b_sdkhookloaded && checkslot < 3 && (pClass == TFClass_Soldier || pClass == TFClass_DemoMan)) // Maybe gunboats? Or charge n targe?
 			{
 				playerLoadout[client][checkslot][1] = -1;
 				continue;
 			}
-#endif
 			if(playerLoadout[client][checkslot][0] == -1)
 				continue;
 			playerLoadout[client][checkslot] = {-1, -1};
@@ -1017,7 +984,6 @@ public Action:CheckPlayerLoadout(Handle:timer, any:userid)
 			playerLoadout[client][checkslot][1] = EntIndexToEntRef(ent);
 		}
 	}
-#if defined _sdkhooks_included
 	if(b_sdkhookloaded)
 	{
 		if(newLoadout) // Just in case we already updated it due to a hat spawning or being a new client
@@ -1025,7 +991,6 @@ public Action:CheckPlayerLoadout(Handle:timer, any:userid)
 		CreateTimer(0.2, LogWeaponLoadout, userid);
 		return Plugin_Stop;
 	}
-#endif
 	if(newLoadout)
 		LogWeaponLoadout(INVALID_HANDLE, userid);
 		
@@ -1042,16 +1007,12 @@ public Action:LogWeaponLoadout(Handle:timer, any:userid)
 			if(playerLoadout[client][i][0] != -1 && !IsValidEntity(playerLoadout[client][i][1]) || playerLoadout[client][i][1] == 0)
 			{
 				playerLoadout[client][i] = {-1, -1};
-#if defined _sdkhooks_included
 				playerLoadoutUpdated[client] = true;
-#endif
 			}
 		}
-#if defined _sdkhooks_included
 		if(playerLoadoutUpdated[client] == false)
 			return Plugin_Stop;
 		playerLoadoutUpdated[client] = false;
-#endif
 		if(client > 0 && IsClientInGame(client))
 		{
 			decl String:logString[255];
@@ -1155,9 +1116,7 @@ PopulateWeaponTrie()
 	if(GetTrieValue(h_weapontrie, "ball", index))
 	{
 		SetTrieValue(h_weapontrie, "tf_projectile_stun_ball", index);
-#if defined _sdkhooks_included
 		stunBallId = index;
-#endif
 	}
 }
 
