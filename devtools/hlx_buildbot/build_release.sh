@@ -122,7 +122,7 @@ if [[ -n "${REPOSITORY}" && -n "${RELEASE_NUMBER}" ]]; then
 		WRONG_VERSION_NUMBER=1
 	fi
 	# upgrade.php
-	grep -q "'${RELEASE_NUMBER}'" ${BUILD_LOCATION}/web/updater/*.php
+	grep -q "${RELEASE_NUMBER}" ${BUILD_LOCATION}/web/updater/*.php
 	if [ $? -eq 1 ]; then
 		echo ""
 		echo " [!] WARNING: Version number ${RELEASE_NUMBER} not found in any updater file."
