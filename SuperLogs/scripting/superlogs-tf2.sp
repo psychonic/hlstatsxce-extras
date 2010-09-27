@@ -28,7 +28,7 @@
 #include <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 #define REQUIRE_EXTENSIONS
 
-#define VERSION "2.0.12"
+#define VERSION "2.0.13"
 #define NAME "SuperLogs: TF2"
 
 #define UNLOCKABLE_BIT (1<<30)
@@ -502,7 +502,7 @@ public OnGameFrame()
 	new cnt = GetClientCount();
 	for (new i = 1; i <= cnt; i++)
 	{
-		if (GetEntData(i, g_iCarryingOffs, 1))
+		if (IsClientInGame(i) && GetEntData(i, g_iCarryingOffs, 1))
 			g_bCarryingObject[i] = true;
 	}
 }
