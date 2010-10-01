@@ -28,7 +28,7 @@
 #include <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 #define REQUIRE_EXTENSIONS
 
-#define VERSION "2.0.12"
+#define VERSION "2.0.16"
 #define NAME "SuperLogs: TF2"
 
 #define UNLOCKABLE_BIT (1<<30)
@@ -49,15 +49,16 @@
 #define WEAPONID_PLAYER 0
 #define WEAPONID_MEDICSAW 11
 #define WEAPONID_ROCKET 22
-#define WEAPONID_DIRECTHIT 64
+#define WEAPONID_DIRECTHIT 65
 #define WEAPONID_PIPEBOMB_LAUNCHER 23
-#define WEAPONID_PIPEBOMB 52
+#define WEAPONID_PIPEBOMB 53
 #define WEAPONID_STICKY_LAUNCHER 24
 #define WEAPONID_STICKY 35
 #define WEAPONID_FLARE 57
 #define WEAPONID_ARROW 60
 #define WEAPONID_JAR 39
 #define WEAPONID_BASEBALL 38
+#define WEAPONID_FISH 72
 #define ITEMINDEX_DEMOSHIELD 131
 #define ITEMINDEX_GUNBOATS 133
 #define JUMP_NONE 0
@@ -502,7 +503,7 @@ public OnGameFrame()
 	new cnt = GetClientCount();
 	for (new i = 1; i <= cnt; i++)
 	{
-		if (GetEntData(i, g_iCarryingOffs, 1))
+		if (IsClientInGame(i) && GetEntData(i, g_iCarryingOffs, 1))
 			g_bCarryingObject[i] = true;
 	}
 }
@@ -791,10 +792,13 @@ public Event_ObjectDestroyed(Handle:event, const String:name[], bool:dontBroadca
 		decl String:auth[32];
 		decl String:properties[255];
 		GetEventString(event, "weapon", weapon, sizeof(weapon));
-		new victim = GetClientOfUserId(GetEventInt(event, "userid"));
+		new victimuid = GetEventInt(event, "userid");
+		new victim = GetClientOfUserId(victimuid);
+		if (!IsClientInGame(victim))
+			return;
 		GetClientAuthString(victim, auth, sizeof(auth));
 		GetTeamName(GetClientTeam(victim), team, sizeof(team));
-		Format(properties, sizeof(properties), " (object \"OBJ_SENTRYGUN_MINI\") (weapon \"%s\") (objectowner \"%N<%d><%s><%s>\")");
+		Format(properties, sizeof(properties), " (object \"OBJ_SENTRYGUN_MINI\") (weapon \"%s\") (objectowner \"%N<%d><%s><%s>\")", weapon, victim, victimuid, auth, team);
 		LogPlayerEvent(GetEventInt(event, "attacker"), "triggered", "killedobject", true, properties);
 	}
 }
@@ -822,6 +826,7 @@ public Event_PlayerBuiltObject(Handle:event, const String:name[], bool:dontBroad
 
 public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 {
+	g_bBlockLog = false;
 	new death_flags = GetEventInt(event, "death_flags");
 	if(!(death_flags & 32)) // Not a dead ringer death?
 	{
@@ -901,6 +906,13 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 	new attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
 	new victim = GetClientOfUserId(GetEventInt(event, "userid"));
 	new customkill = GetEventInt(event, "customkill");
+	new weapon = GetEventInt(event, "weaponid");
+	if (weapon == WEAPONID_FISH && customkill != 39)
+	{
+		g_bBlockLog = true;
+		return Plugin_Continue;
+	}
+	
 	switch (customkill)
 	{
 		case 1:
@@ -1160,7 +1172,7 @@ public Action:Event_PlayerShieldBlocked(UserMsg:msg_id, Handle:bf, const players
 // Modified Octo's method a bit to try and reduce checking of sound strings
 public Action:SoundHook(clients[64], &numClients, String:sample[PLATFORM_MAX_PATH], &entity, &channel, &Float:volume, &level, &pitch, &flags)
 {
-	if(clients[0] == entity && playerClass[entity] == TFClass_Heavy && StrEqual(sample,"vo/SandwichEat09.wav"))
+	if(entity <= MaxClients && clients[0] == entity && playerClass[entity] == TFClass_Heavy && StrEqual(sample,"vo/SandwichEat09.wav"))
 	{
 		if(playerLoadout[entity][1][0] == LUNCHBOX_CHOCOLATE)
 		{
