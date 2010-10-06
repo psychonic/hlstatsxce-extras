@@ -1,3 +1,10 @@
+<html>
+<head>
+	<title>Interwave Community Post-web Builder</title>
+</head>
+
+<body>
+
 <?php
 
 # Google Code Post-Commit build wrapper
@@ -11,7 +18,7 @@ if (isset($_GET['project']))
 }
 else
 {
-	die("This script can not be accessed directly.");
+	die("<p>This script can not be accessed directly.</p></body></html>");
 }
 
 switch ($project) {
@@ -28,7 +35,30 @@ switch ($project) {
 		else
 		{
 			$build_stable = 1;
+			
 		}
-		passthru("sudo -u hg /home/hg/hlx_buildbot/build_snapshot.sh $build_dev $build_stable");
+		if (($build_dev) || ($build_stable)) 
+		{
+			exec("sudo -u hg /home/hg/hlx_buildbot/build_snapshot.sh $build_dev $build_stable", $output);
+			foreach ($output as $line) {
+				$message .= $line . "\n";
+			}
+			print "<pre>" . $message . "</pre>";
+
+
+			# Send e-mail
+			$to = "hlxce-devel@googlegroups.com";
+			$subject = "Build log for recent commit to $repository";
+	
+			$headers = 	'From: buildbot@hlxce.com' . "\r\n" .
+					'Reply-To: hlxce-devel@googlegroups.com' . "\r\n" .
+					'X-Mailer: PHP/' . phpversion();
+			mail($to, $subject, $message, $headers);
+		}
 	break;
 }	
+
+?>
+
+</body>
+</html>

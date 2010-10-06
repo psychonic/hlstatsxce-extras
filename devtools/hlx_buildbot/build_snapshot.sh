@@ -81,7 +81,6 @@ else
 	echo 1 > ${COUNTER_FILE}
 fi
 
-clear
 
 # Determine which branch (or both) to build
 

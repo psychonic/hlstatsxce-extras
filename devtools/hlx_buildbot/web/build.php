@@ -3,6 +3,37 @@
 #
 # This script is called by GoogleCode when a push is detected.
 # Based on what the rev was we decide to build a stable or dev package.
+
+# Grab user entry if specified
+
+if (isset($_POST['form_submitted']) && ($_POST['form_submitted'] == 1))
+{
+	$form_submitted = 1;
+        // Grab posted variables
+        if (isset($_POST['repository']))
+        {
+                $repository = $_POST['repository'];
+        }
+        if (isset($_POST['release_number']))
+        {
+                $release_number = $_POST['release_number'];
+        }
+        if (isset($_POST['upgrade_rev']))
+        {
+                $upgrade_rev = $_POST['upgrade_rev'];
+        }
+
+        if (isset($_POST['test_only']))
+        {
+                $test_only = 1;
+        }
+        else
+        {
+                $test_only = 0;
+        }
+}
+
+
 ?>
 
 <html>
@@ -23,54 +54,32 @@
 
 	<form action="build.php" method="post">
 		<label for="release_number">Release Number: </label>
-		<input type="text" name="release_number" value="1.6.10">
+		<input type="text" name="release_number" value="<?php echo $release_number; ?>">
 		<br /><br />
 		<label for="repository">Repository: </label>
 		<select name="repository">
-			<option value="hlx-dev" selected>Development Branch</option>
-			<option value="hlx-16">1.6.X Branch</option>
+			<option value="NULL" <?php if ($repository == "NULL") { echo "selected"; } ?>>Choose One...</option>
+			<option value="hlx-dev" <?php if ($repository == "hlx-dev") { echo "selected"; } ?>>Development Branch</option>
+			<option value="hlx-16" <?php if ($repository == "hlx-16") { echo "selected"; } ?>>1.6.X Branch</option>
 		</select><br /><br />
 		<label for="upgrade_rev">Upgrade Tag/Rev: </label>
-		<input type="text" name="upgrade_rev" /><br /><br />
+		<input type="text" name="upgrade_rev" value="<?php echo $upgrade_rev; ?>" /><br /><br />
 		<label for="test_only">Test only (ignore verioning errors): </label>
-		<input type="checkbox" name="test_only" value="test_only" /><br /><br />
+		<input type="checkbox" name="test_only" value="test_only" <?php if ($test_only == 1) { echo "checked=\"checked\""; } ?> /><br /><br />
 		<input type="hidden" name="form_submitted" value="1" />
 		<input type="submit" value="Start Build" />
 	</form>
+
 <?php
 
-if (isset($_POST['form_submitted']) && ($_POST['form_submitted'] == 1))
-{
-	// Grab posted variables
-	if (isset($_POST['repository']))
-	{
-		$repository = escapeshellarg($_POST['repository']);
+	if ($form_submitted) {
+		echo '<textarea id="shell_output">';
+		$repository = escapeshellarg($repository);
+		$release_number = escapeshellarg($release_number);
+		$upgrade_rev = escapeshellarg($upgrade_rev);
+		passthru("/usr/bin/sudo -u hg /home/hg/hlx_buildbot/build_release.sh $repository $release_number $upgrade_rev $test_only");
+		echo '</textarea>';
 	}
-	if (isset($_POST['release_number']))
-	{
-		$release_number = escapeshellarg($_POST['release_number']);
-	}
-	if (isset($_POST['upgrade_rev']))
-	{
-		$upgrade_rev = escapeshellarg($_POST['upgrade_rev']);
-	}
-
-	if (isset($_POST['test_only']))
-	{
-		$test_only = 1;
-	}
-	else
-	{
-		$test_only = 0;
-	}
-?>
-	<textarea id="shell_output">
-<?php	
-	passthru("/usr/bin/sudo -u hg /home/hg/hlx_buildbot/build_release.sh $repository $release_number $upgrade_rev $test_only");
-?>
-	</textarea>
-<?php
-}
 ?>
 
 </body>
