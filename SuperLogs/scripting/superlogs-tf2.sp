@@ -28,7 +28,7 @@
 #include <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 #define REQUIRE_EXTENSIONS
 
-#define VERSION "2.0.16"
+#define VERSION "2.0.17"
 #define NAME "SuperLogs: TF2"
 
 #define UNLOCKABLE_BIT (1<<30)
@@ -813,10 +813,12 @@ public Event_PlayerBuiltObjectPre(Handle:event, const String:name[], bool:dontBr
 
 public Event_PlayerBuiltObject(Handle:event, const String:name[], bool:dontBroadcast)
 {
+	new client = GetClientOfUserId(GetEventInt(event, "userid"));
+	g_bCarryingObject[client] = false;
+	
 	if (g_bBlockLog)
 	{
 		g_bBlockLog = false;
-		new client = GetClientOfUserId(GetEventInt(event, "userid"));
 		if (!g_bCarryingObject[client] && GetEntProp(GetEventInt(event, "index"), Prop_Send, "m_bMiniBuilding", 1))
 		{
 			LogPlayerEvent(client, "triggered", "builtobject", true, " (object \"OBJ_SENTRYGUN_MINI\")");
