@@ -1,8 +1,8 @@
 /*
  * HLstatsX Community Edition - SourceMod plugin to generate advanced weapon logging
  * http://www.hlxcommunity.com
+ * Copyright (C) 2009-2010 Nicholas Hastings (psychonic)
  * Copyright (C) 2010 Thomas "CmptrWz" Berezansky
- * Copyright (C) 2009 Nicholas Hastings (psychonic)
  * Copyright (C) 2007-2008 TTS Oetzel & Goerz GmbH
  *
  * This program is free software; you can redistribute it and/or
@@ -28,7 +28,7 @@
 #include <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 #define REQUIRE_EXTENSIONS
 
-#define VERSION "2.0.16"
+#define VERSION "2.0.19"
 #define NAME "SuperLogs: TF2"
 
 #define UNLOCKABLE_BIT (1<<30)
@@ -367,7 +367,7 @@ public Action:OnGameLog(const String:message[])
 
 public Action:OnTakeDamage(victim, &attacker, &inflictor, &Float:damage, &damagetype)
 {
-	if(b_actions && attacker > 0 && attacker != victim && inflictor > MaxClients && IsValidEntity(inflictor) && (GetEntityFlags(victim) & (FL_ONGROUND | FL_INWATER)) == 0)
+	if(b_actions && attacker > 0 && attacker != victim && inflictor > MaxClients && damage > 0.0 && IsValidEntity(inflictor) && (GetEntityFlags(victim) & (FL_ONGROUND | FL_INWATER)) == 0)
 	{
 		decl String:weapon[WEAPON_FULL_LENGTH];
 		GetEdictClassname(inflictor, weapon, sizeof(weapon));
@@ -813,10 +813,12 @@ public Event_PlayerBuiltObjectPre(Handle:event, const String:name[], bool:dontBr
 
 public Event_PlayerBuiltObject(Handle:event, const String:name[], bool:dontBroadcast)
 {
+	new client = GetClientOfUserId(GetEventInt(event, "userid"));
+	g_bCarryingObject[client] = false;
+	
 	if (g_bBlockLog)
 	{
 		g_bBlockLog = false;
-		new client = GetClientOfUserId(GetEventInt(event, "userid"));
 		if (!g_bCarryingObject[client] && GetEntProp(GetEventInt(event, "index"), Prop_Send, "m_bMiniBuilding", 1))
 		{
 			LogPlayerEvent(client, "triggered", "builtobject", true, " (object \"OBJ_SENTRYGUN_MINI\")");
@@ -826,7 +828,6 @@ public Event_PlayerBuiltObject(Handle:event, const String:name[], bool:dontBroad
 
 public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 {
-	g_bBlockLog = false;
 	new death_flags = GetEventInt(event, "death_flags");
 	if(!(death_flags & 32)) // Not a dead ringer death?
 	{
@@ -907,11 +908,13 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 	new victim = GetClientOfUserId(GetEventInt(event, "userid"));
 	new customkill = GetEventInt(event, "customkill");
 	new weapon = GetEventInt(event, "weaponid");
-	if (weapon == WEAPONID_FISH && customkill != 39)
+	new inflictor = GetEventInt(event, "inflictor_entindex");
+	if (!IsValidEdict(inflictor))
 	{
-		g_bBlockLog = true;
-		return Plugin_Continue;
+		inflictor = 0;
 	}
+	
+	new bool:bAlteredLog = false;
 	
 	switch (customkill)
 	{
@@ -919,13 +922,11 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 			if(b_headshots)
 			{
 				LogPlyrPlyrEvent(attacker, victim, "triggered", "headshot");
-				return Plugin_Continue;
 			}
 		case 2:
 			if(b_backstabs)
 			{
 				LogPlyrPlyrEvent(attacker, victim, "triggered", "backstab");
-				return Plugin_Continue;
 			}
 		case 17, 18:
 			if(b_fire)
@@ -935,19 +936,76 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 				if(logweapon[0] != 'd') // No changing reflects - was 'r' but it is deflects
 				{
 					SetEventString(event, "weapon_logclassname", "tf_projectile_arrow_fire");
-					return Plugin_Continue;
+					bAlteredLog = true;
 				}
 			}
 		case 29:
 			if(GetEventInt(event, "weaponid") == WEAPONID_MEDICSAW)
 			{
 				SetEventString(event, "weapon_logclassname", "taunt_medic");
-				return Plugin_Continue;
+				bAlteredLog = true;
 			}
 	}
 	
-	new inflictor = GetEventInt(event, "inflictor_entindex");
-	if (inflictor > MaxClients && IsValidEdict(inflictor))
+	if (!bAlteredLog && inflictor > 0)
+	{
+		// check for blackbox, bushwacka, glovesurgent, sydneysleeper
+		switch (weapon)
+		{
+			case TF_WEAPON_CLUB:
+				{
+					if (inflictor > 0 && inflictor <= MaxClients && IsClientInGame(inflictor))
+					{
+						new weaponent = GetEntPropEnt(inflictor, Prop_Send, "m_hActiveWeapon");
+						if (weaponent > -1 && GetEntProp(weaponent, Prop_Send, "m_iItemDefinitionIndex") == 232)
+						{
+							SetEventString(event, "weapon_logclassname", "bushwacka");
+						}
+					}
+				}
+			case TF_WEAPON_FISTS:
+				{
+					if (inflictor > 0 && inflictor <= MaxClients && IsClientInGame(inflictor))
+					{
+						new weaponent = GetEntPropEnt(inflictor, Prop_Send, "m_hActiveWeapon");
+						if (weaponent > -1 && GetEntProp(weaponent, Prop_Send, "m_iItemDefinitionIndex") == 239)
+						{
+							SetEventString(event, "weapon_logclassname", "glovesurgent");
+						}
+					}
+				}
+			case TF_WEAPON_SNIPERRIFLE:
+				{
+					if (inflictor > 0 && inflictor <= MaxClients && IsClientInGame(inflictor))
+					{
+						new weaponent = GetEntPropEnt(inflictor, Prop_Send, "m_hActiveWeapon");
+						if (weaponent > -1 && GetEntProp(weaponent, Prop_Send, "m_iItemDefinitionIndex") == 230)
+						{
+							SetEventString(event, "weapon_logclassname", "sydneysleeper");
+						}
+					}
+				}
+			case TF_WEAPON_ROCKETLAUNCHER:
+				{
+					if (inflictor > MaxClients)
+					{
+						new owner = GetEntPropEnt(inflictor, Prop_Send, "m_hOwnerEntity");
+						if (owner > 0 && owner <= MaxClients && IsClientInGame(owner))
+						{
+							new weaponent = GetPlayerWeaponSlot(owner, 0);
+							if (weaponent > 0 && IsValidEdict(weaponent)
+								&& GetEntProp(weaponent, Prop_Send, "m_iItemDefinitionIndex") == 228
+								)
+							{
+								SetEventString(event, "weapon_logclassname", "blackbox");
+							}
+						}
+					}
+				}
+		}
+	}
+	
+	if (inflictor > MaxClients)
 	{
 		decl String:clsname[64];
 		GetEdictClassname(inflictor, clsname, sizeof(clsname));

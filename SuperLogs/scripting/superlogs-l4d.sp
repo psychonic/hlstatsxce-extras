@@ -25,7 +25,7 @@
 #include <sdktools>
 
 #define NAME "SuperLogs: L4D"
-#define VERSION "1.3.2"
+#define VERSION "1.3.3"
 
 #define MAX_LOG_WEAPONS 27
 #define MAX_WEAPON_LEN 16
@@ -287,6 +287,14 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 			if (hitgroup < 8)
 			{
 				g_weapon_stats[attacker][weapon_index][hitgroup + LOG_HIT_OFFSET]++;
+			}
+		}
+		else if (g_logactions && !strcmp(weapon, "insect_swarm"))
+		{
+			new victim = GetClientOfUserId(GetEventInt(event, "userid"));
+			if (victim > 0 && IsClientInGame(victim) && GetClientTeam(victim) == 2 &&  !GetEntProp(victim, Prop_Send, "m_isIncapacitated"))
+			{
+				LogPlyrPlyrEvent(attacker, victim, "triggered", "spit_hurt", true);
 			}
 		}
 	}
