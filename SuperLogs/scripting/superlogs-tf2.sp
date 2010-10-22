@@ -28,7 +28,7 @@
 #include <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 #define REQUIRE_EXTENSIONS
 
-#define VERSION "2.0.19"
+#define VERSION "2.0.20"
 #define NAME "SuperLogs: TF2"
 
 #define UNLOCKABLE_BIT (1<<30)
@@ -46,19 +46,6 @@
 #define OBJ_SENTRYGUN 3
 #define OBJ_ATTACHMENT_SAPPER 4
 #define OBJ_SENTRYGUN_MINI 20
-#define WEAPONID_PLAYER 0
-#define WEAPONID_MEDICSAW 11
-#define WEAPONID_ROCKET 22
-#define WEAPONID_DIRECTHIT 65
-#define WEAPONID_PIPEBOMB_LAUNCHER 23
-#define WEAPONID_PIPEBOMB 53
-#define WEAPONID_STICKY_LAUNCHER 24
-#define WEAPONID_STICKY 35
-#define WEAPONID_FLARE 57
-#define WEAPONID_ARROW 60
-#define WEAPONID_JAR 39
-#define WEAPONID_BASEBALL 38
-#define WEAPONID_FISH 72
 #define ITEMINDEX_DEMOSHIELD 131
 #define ITEMINDEX_GUNBOATS 133
 #define JUMP_NONE 0
@@ -745,29 +732,35 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 			{
 				switch(GetEventInt(event, "weaponid"))
 				{
-					case WEAPONID_ROCKET, WEAPONID_DIRECTHIT:
+					case TF_WEAPON_ROCKETLAUNCHER, TF_WEAPON_DIRECTHIT:
 					{
 						LogPlayerEvent(attacker, "triggered", "airshot_rocket");
 						if(jumpStatus[attacker] == JUMP_ROCKET)
 							LogPlayerEvent(attacker, "triggered", "air2airshot_rocket");
 					}
-					case WEAPONID_PIPEBOMB_LAUNCHER:
+					case TF_WEAPON_GRENADELAUNCHER:
 					{
 						LogPlayerEvent(attacker, "triggered", "airshot_pipebomb");
 						if(jumpStatus[attacker] == JUMP_STICKY)
 							LogPlayerEvent(attacker, "triggered", "air2airshot_pipebomb");
 					}
-					case WEAPONID_STICKY_LAUNCHER:
+					case TF_WEAPON_PIPEBOMBLAUNCHER:
 					{
 						LogPlayerEvent(attacker, "triggered", "airshot_sticky");
 						if(jumpStatus[attacker] == JUMP_STICKY)
 							LogPlayerEvent(attacker, "triggered", "air2airshot_sticky");
 					}
-					case WEAPONID_ARROW:
-						LogPlayerEvent(attacker, "triggered", "airshot_arrow");
-					case WEAPONID_FLARE:
+					case TF_WEAPON_FLAREGUN:
+					{
 						if(GetEventInt(event, "damageamount") > 10)
+						{
 							LogPlayerEvent(attacker, "triggered", "airshot_flare");
+						}
+					}
+					case TF_WEAPON_COMPOUND_BOW:
+					{
+						LogPlayerEvent(attacker, "triggered", "airshot_arrow");
+					}
 				}
 			}
 		}
@@ -829,76 +822,78 @@ public Event_PlayerBuiltObject(Handle:event, const String:name[], bool:dontBroad
 public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new death_flags = GetEventInt(event, "death_flags");
-	if(!(death_flags & 32)) // Not a dead ringer death?
+	if((death_flags & TF_DEATHFLAG_DEADRINGER) == TF_DEATHFLAG_DEADRINGER) // Not a dead ringer death?
 	{
-		new client = GetClientOfUserId(GetEventInt(event, "userid"));
-		new attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
-		new customkill = GetEventInt(event, "customkill");
-		new bits = GetEventInt(event, "damagebits");
-		if(b_heals && playerClass[client] != TFClass_Medic) // medic_death event handles this for dead medics
-			DumpHeals(client);
-		jumpStatus[client] = JUMP_NONE; // Not jumping
-		g_bCarryingObject[client] = false;
-		if(b_actions)
+		return;
+	}
+	
+	new client = GetClientOfUserId(GetEventInt(event, "userid"));
+	new attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
+	new customkill = GetEventInt(event, "customkill");
+	new bits = GetEventInt(event, "damagebits");
+	if(b_heals && playerClass[client] != TFClass_Medic) // medic_death event handles this for dead medics
+		DumpHeals(client);
+	jumpStatus[client] = JUMP_NONE; // Not jumping
+	g_bCarryingObject[client] = false;
+	if(b_actions)
+	{
+		if(attacker == client && customkill == TF_CUSTOM_SUICIDE)
+			LogPlayerEvent(client, "triggered", "force_suicide");
+		else
 		{
-			if(attacker == client && customkill == 6)
-				LogPlayerEvent(client, "triggered", "force_suicide");
-			else
+			switch(jumpStatus[client])
 			{
-				switch(jumpStatus[client])
+				case 2:
+				{
+					LogPlayerEvent(client, "triggered", "rocket_failjump");
+					if(attacker > 0 && attacker != client)
+						LogPlayerEvent(attacker, "triggered", "rocket_jumper_kill");
+				}
+				case 3:
+				{
+					LogPlayerEvent(client, "triggered", "sticky_failjump");
+					if(attacker > 0 && attacker != client)
+						LogPlayerEvent(attacker, "triggered", "sticky_jumper_kill");
+				}
+			}
+			if(bits & DMG_DROWN)
+			{
+				LogPlayerEvent(client, "triggered", "drowned");
+			}
+			else if(attacker != client)
+			{
+				switch(jumpStatus[attacker]) // Don't need to check attacker != 0 here as world will never rocket/sticky jump
 				{
 					case 2:
-					{
-						LogPlayerEvent(client, "triggered", "rocket_failjump");
-						if(attacker > 0 && attacker != client)
-							LogPlayerEvent(attacker, "triggered", "rocket_jumper_kill");
-					}
+						LogPlayerEvent(attacker, "triggered", "rocket_jump_kill");
 					case 3:
-					{
-						LogPlayerEvent(client, "triggered", "sticky_failjump");
-						if(attacker > 0 && attacker != client)
-							LogPlayerEvent(attacker, "triggered", "sticky_jumper_kill");
-					}
+						LogPlayerEvent(attacker, "triggered", "sticky_jump_kill");
 				}
-				if(bits & 16384)
-				{
-					LogPlayerEvent(client, "triggered", "drowned");
-				}
-				else if(attacker != client)
-				{
-					switch(jumpStatus[attacker]) // Don't need to check attacker != 0 here as world will never rocket/sticky jump
-					{
-						case 2:
-							LogPlayerEvent(attacker, "triggered", "rocket_jump_kill");
-						case 3:
-							LogPlayerEvent(attacker, "triggered", "sticky_jump_kill");
-					}
-					if ((bits & 1048576) && attacker > 0 && customkill != 1)
-						LogPlayerEvent(attacker, "triggered", "crit_kill");
-					else if(death_flags & 16)
-						LogPlayerEvent(attacker, "triggered", "first_blood");
-					if (customkill == 1 && client > 0 && client <= MaxClients
-						&& IsClientInGame(client) && (GetEntityFlags(client) & (FL_ONGROUND | FL_INWATER)) == 0)
-						LogPlayerEvent(attacker, "triggered", "airshot_headshot");
-				}
+				if ((bits & DMG_ACID) && attacker > 0 && customkill != TF_CUSTOM_HEADSHOT)
+					LogPlayerEvent(attacker, "triggered", "crit_kill");
+				else if((death_flags & TF_DEATHFLAG_FIRSTBLOOD) == TF_DEATHFLAG_FIRSTBLOOD)
+					LogPlayerEvent(attacker, "triggered", "first_blood");
+				if (customkill == TF_CUSTOM_HEADSHOT && client > 0 && client <= MaxClients
+					&& IsClientInGame(client) && (GetEntityFlags(client) & (FL_ONGROUND | FL_INWATER)) == 0)
+					LogPlayerEvent(attacker, "triggered", "airshot_headshot");
 			}
 		}
-		if(b_wstats && client > 0 && attacker > 0 && attacker <= MaxClients)
+	}
+	if(b_wstats && client > 0 && attacker > 0 && attacker <= MaxClients)
+	{
+		decl String:weaponlogname[MAX_WEAPON_LEN];
+		GetEventString(event, "weapon_logclassname", weaponlogname, sizeof(weaponlogname));
+		new weapon_index = GetWeaponIndex(weaponlogname, attacker);
+		if(weapon_index != -1)
 		{
-			decl String:weaponlogname[MAX_WEAPON_LEN];
-			GetEventString(event, "weapon_logclassname", weaponlogname, sizeof(weaponlogname));
-			new weapon_index = GetWeaponIndex(weaponlogname, attacker);
-			if(weapon_index != -1)
-			{
-				weaponStats[attacker][weapon_index][LOG_KILLS]++;
-				if(customkill == 1)
-					weaponStats[attacker][weapon_index][LOG_HEADSHOTS]++;
-				weaponStats[client][weapon_index][LOG_DEATHS]++;
-				if(GetClientTeam(client) == GetClientTeam(attacker))
-					weaponStats[attacker][weapon_index][LOG_TEAMKILLS]++;
-			}
-			DumpWeaponStats(client);
+			weaponStats[attacker][weapon_index][LOG_KILLS]++;
+			if(customkill == TF_CUSTOM_HEADSHOT)
+				weaponStats[attacker][weapon_index][LOG_HEADSHOTS]++;
+			weaponStats[client][weapon_index][LOG_DEATHS]++;
+			if(GetClientTeam(client) == GetClientTeam(attacker))
+				weaponStats[attacker][weapon_index][LOG_TEAMKILLS]++;
 		}
+		DumpWeaponStats(client);
 	}
 }
 
@@ -918,17 +913,17 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 	
 	switch (customkill)
 	{
-		case 1:
+		case TF_CUSTOM_HEADSHOT:
 			if(b_headshots)
 			{
 				LogPlyrPlyrEvent(attacker, victim, "triggered", "headshot");
 			}
-		case 2:
+		case TF_CUSTOM_BACKSTAB:
 			if(b_backstabs)
 			{
 				LogPlyrPlyrEvent(attacker, victim, "triggered", "backstab");
 			}
-		case 17, 18:
+		case TF_CUSTOM_BURNING_ARROW, TF_CUSTOM_FLYINGBURN:
 			if(b_fire)
 			{
 				decl String:logweapon[64];
@@ -939,12 +934,14 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 					bAlteredLog = true;
 				}
 			}
-		case 29:
-			if(GetEventInt(event, "weaponid") == WEAPONID_MEDICSAW)
+		case TF_CUSTOM_TAUNT_UBERSLICE:
+		{
+			if(GetEventInt(event, "weaponid") == TF_WEAPON_BONESAW)
 			{
 				SetEventString(event, "weapon_logclassname", "taunt_medic");
 				bAlteredLog = true;
 			}
+		}
 	}
 	
 	if (!bAlteredLog && inflictor > 0)
@@ -1064,31 +1061,11 @@ public Event_ObjectDeflected(Handle:event, const String:name[], bool:dontBroadca
 	new owner = GetClientOfUserId(GetEventInt(event, "ownerid"));
 	switch(GetEventInt(event, "weaponid"))
 	{
-		case WEAPONID_PLAYER:
+		case TF_WEAPON_NONE:
+		{
 			LogPlyrPlyrEvent(client, owner, "triggered", "airblast_player", true);
-		case WEAPONID_ARROW:
-		{
-			LogPlyrPlyrEvent(client, owner, "triggered", "deflected_arrow", true);
-			if(b_wstats && b_sdkhookloaded)
-			{
-				new weapon_index = GetWeaponIndex("deflect_arrow");
-				if(weapon_index > -1)
-					weaponStats[client][weapon_index][LOG_SHOTS]++;
-			}
 		}
-		case WEAPONID_FLARE:
-		{
-			LogPlyrPlyrEvent(client, owner, "triggered", "deflected_flare", true);
-			if(b_wstats && b_sdkhookloaded)
-			{
-				new weapon_index = GetWeaponIndex("deflect_flare");
-				if(weapon_index > -1)
-					weaponStats[client][weapon_index][LOG_SHOTS]++;
-			}
-		}
-		case WEAPONID_JAR:
-			LogPlyrPlyrEvent(client, owner, "triggered", "deflected_jarate", true);
-		case WEAPONID_ROCKET:
+		case TF_WEAPON_ROCKETLAUNCHER:
 		{
 			LogPlyrPlyrEvent(client, owner, "triggered", "deflected_rocket", true);
 			if(b_wstats && b_sdkhookloaded)
@@ -1098,17 +1075,7 @@ public Event_ObjectDeflected(Handle:event, const String:name[], bool:dontBroadca
 					weaponStats[client][weapon_index][LOG_SHOTS]++;
 			}
 		}
-		case WEAPONID_DIRECTHIT:
-		{
-			LogPlyrPlyrEvent(client, owner, "triggered", "deflected_rocket_dh", true);
-			if(b_wstats && b_sdkhookloaded)
-			{
-				new weapon_index = GetWeaponIndex("deflect_rocket");
-				if(weapon_index > -1)
-					weaponStats[client][weapon_index][LOG_SHOTS]++;
-			}
-		}
-		case WEAPONID_PIPEBOMB:
+		case TF_WEAPON_GRENADE_DEMOMAN:
 		{
 			LogPlyrPlyrEvent(client, owner, "triggered", "deflected_pipebomb", true);
 			if(b_wstats && b_sdkhookloaded)
@@ -1118,8 +1085,44 @@ public Event_ObjectDeflected(Handle:event, const String:name[], bool:dontBroadca
 					weaponStats[client][weapon_index][LOG_SHOTS]++;
 			}
 		}
-		case WEAPONID_BASEBALL:
+		case TF_WEAPON_FLAREGUN:
+		{
+			LogPlyrPlyrEvent(client, owner, "triggered", "deflected_flare", true);
+			if(b_wstats && b_sdkhookloaded)
+			{
+				new weapon_index = GetWeaponIndex("deflect_flare");
+				if(weapon_index > -1)
+					weaponStats[client][weapon_index][LOG_SHOTS]++;
+			}
+		}
+		case TF_WEAPON_JAR:
+		{
+			LogPlyrPlyrEvent(client, owner, "triggered", "deflected_jarate", true);
+		}
+		case TF_WEAPON_COMPOUND_BOW:
+		{
+			LogPlyrPlyrEvent(client, owner, "triggered", "deflected_arrow", true);
+			if(b_wstats && b_sdkhookloaded)
+			{
+				new weapon_index = GetWeaponIndex("deflect_arrow");
+				if(weapon_index > -1)
+					weaponStats[client][weapon_index][LOG_SHOTS]++;
+			}
+		}
+		case TF_WEAPON_DIRECTHIT:
+		{
+			LogPlyrPlyrEvent(client, owner, "triggered", "deflected_rocket_dh", true);
+			if(b_wstats && b_sdkhookloaded)
+			{
+				new weapon_index = GetWeaponIndex("deflect_rocket");
+				if(weapon_index > -1)
+					weaponStats[client][weapon_index][LOG_SHOTS]++;
+			}
+		}
+		case TF_WEAPON_GRENADE_STUNBALL:
+		{
 			LogPlyrPlyrEvent(client, owner, "triggered", "deflected_baseball", true);
+		}
 	}
 }
 
