@@ -28,7 +28,7 @@
 #include <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 #define REQUIRE_EXTENSIONS
 
-#define VERSION "2.0.21"
+#define VERSION "2.0.22"
 #define NAME "SuperLogs: TF2"
 
 #define UNLOCKABLE_BIT (1<<30)
@@ -410,7 +410,7 @@ public OnTakeDamage_Post(victim, attacker, inflictor, Float:damage, damagetype)
 			GetClientWeapon(attacker, weapon, sizeof(weapon));
 			weapon_index = GetWeaponIndex(weapon[WEAPON_PREFIX_LENGTH], attacker);
 		}
-		else if (IsValidEntity(inflictor))
+		else if (IsValidEdict(inflictor))
 		{
 			GetEdictClassname(inflictor, weapon, sizeof(weapon));
 			if (weapon[WEAPON_PREFIX_LENGTH] == 'g')
@@ -787,7 +787,7 @@ public Event_ObjectDestroyed(Handle:event, const String:name[], bool:dontBroadca
 		GetEventString(event, "weapon", weapon, sizeof(weapon));
 		new victimuid = GetEventInt(event, "userid");
 		new victim = GetClientOfUserId(victimuid);
-		if (!IsClientInGame(victim))
+		if (victim == 0 || !IsClientInGame(victim))
 			return;
 		GetClientAuthString(victim, auth, sizeof(auth));
 		GetTeamName(GetClientTeam(victim), team, sizeof(team));
@@ -807,7 +807,6 @@ public Event_PlayerBuiltObjectPre(Handle:event, const String:name[], bool:dontBr
 public Event_PlayerBuiltObject(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	new client = GetClientOfUserId(GetEventInt(event, "userid"));
-	g_bCarryingObject[client] = false;
 	
 	if (g_bBlockLog)
 	{
@@ -817,6 +816,8 @@ public Event_PlayerBuiltObject(Handle:event, const String:name[], bool:dontBroad
 			LogPlayerEvent(client, "triggered", "builtobject", true, " (object \"OBJ_SENTRYGUN_MINI\")");
 		}
 	}
+	
+	g_bCarryingObject[client] = false;
 }
 
 public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
@@ -935,13 +936,18 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 				}
 			}
 		case TF_CUSTOM_TAUNT_UBERSLICE:
-		{
-			if(GetEventInt(event, "weaponid") == TF_WEAPON_BONESAW)
 			{
-				SetEventString(event, "weapon_logclassname", "taunt_medic");
-				bAlteredLog = true;
+				if(GetEventInt(event, "weaponid") == TF_WEAPON_BONESAW)
+				{
+					SetEventString(event, "weapon_logclassname", "taunt_medic");
+					bAlteredLog = true;
+				}
 			}
-		}
+		
+		case TF_CUSTOM_DECAPITATION_BOSS:
+			{
+				LogPlayerEvent(attacker, "triggered", "killed_by_horseman", true);
+			}
 	}
 	
 	if (!bAlteredLog && inflictor > 0)
