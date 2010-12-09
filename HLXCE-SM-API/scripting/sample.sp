@@ -40,7 +40,7 @@ public HLXCE_OnClientReady(client)
 }
 
 
-public HLXCE_OnGotPlayerData(client, const HLXCE_PlayerData:PData[])
+public HLXCE_OnGotPlayerData(client, const PData[HLXCE_PlayerData])
 {
 	LogToGame("[SAMPLE] RECEIVING GOT CLIENT DATA FWD");
 	LogToGame("[SAMPLE] %N is on rank %d with %d points and %d kills (%.3f%%)!", client, PData[PData_Rank], PData[PData_Skill], PData[PData_Kills], FloatDiv(Float:(PData[PData_Kills]),Float:((PData[PData_Deaths]==0)?1:PData[PData_Deaths])));
