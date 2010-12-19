@@ -28,7 +28,7 @@
 #include <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 #define REQUIRE_EXTENSIONS
 
-#define VERSION "2.0.22"
+#define VERSION "2.0.23"
 #define NAME "SuperLogs: TF2"
 
 #define UNLOCKABLE_BIT (1<<30)
@@ -60,6 +60,7 @@
 #define LOG_DAMAGE 5
 #define LOG_DEATHS 6
 #define LUNCHBOX_CHOCOLATE 159
+#define LUNCHBOX_STEAK 311
 
 public Plugin:myinfo = {
 	name = NAME,
@@ -988,6 +989,17 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 						}
 					}
 				}
+			case TF_WEAPON_MINIGUN:
+				{
+					if (inflictor > 0 && inflictor <= MaxClients && IsClientInGame(inflictor))
+					{
+						new weaponent = GetEntPropEnt(inflictor, Prop_Send, "m_hActiveWeapon");
+						if (weaponent > -1 && GetEntProp(weaponent, Prop_Send, "m_iItemDefinitionIndex") == 312)
+						{
+							SetEventString(event, "weapon_logclassname", "brassbeast");
+						}
+					}
+				}
 			case TF_WEAPON_ROCKETLAUNCHER:
 				{
 					if (inflictor > MaxClients)
@@ -1002,6 +1014,34 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 							{
 								SetEventString(event, "weapon_logclassname", "blackbox");
 							}
+						}
+					}
+				}
+			case TF_WEAPON_GRENADE_DEMOMAN:
+				{
+					if (inflictor > MaxClients)
+					{
+						new owner = GetEntPropEnt(inflictor, Prop_Send, "m_hThrower");
+						if (owner > 0 && owner <= MaxClients && IsClientInGame(owner))
+						{
+							new weaponent = GetPlayerWeaponSlot(owner, 0);
+							if (weaponent > 0 && IsValidEdict(weaponent)
+								&& GetEntProp(weaponent, Prop_Send, "m_iItemDefinitionIndex") == 308
+								)
+							{
+								SetEventString(event, "weapon_logclassname", "lochnload");
+							}
+						}
+					}
+				}
+			case TF_WEAPON_SWORD:
+				{
+					if (inflictor > 0 && inflictor <= MaxClients && IsClientInGame(inflictor))
+					{
+						new weaponent = GetEntPropEnt(inflictor, Prop_Send, "m_hActiveWeapon");
+						if (weaponent > -1 && GetEntProp(weaponent, Prop_Send, "m_iItemDefinitionIndex") == 327)
+						{
+							SetEventString(event, "weapon_logclassname", "claidheamohmor");
 						}
 					}
 				}
@@ -1255,21 +1295,28 @@ public Action:SoundHook(clients[64], &numClients, String:sample[PLATFORM_MAX_PAT
 {
 	if(entity <= MaxClients && clients[0] == entity && playerClass[entity] == TFClass_Heavy && StrEqual(sample,"vo/SandwichEat09.wav"))
 	{
-		if(playerLoadout[entity][1][0] == LUNCHBOX_CHOCOLATE)
+		switch(playerLoadout[entity][1][0])
 		{
-			LogPlayerEvent(entity, "triggered", "dalokohs");
-			new Float:time = GetGameTime();
-			if(time - dalokohs[entity] > 30)
-				LogPlayerEvent(entity, "triggered", "dalokohs_healthboost");
-			dalokohs[entity] = time;
-			if(GetClientHealth(entity) < 350)
-				LogPlayerEvent(entity, "triggered", "dalokohs_healself");
-		}
-		else
-		{
-			LogPlayerEvent(entity, "triggered", "sandvich");
-			if(GetClientHealth(entity) < 300)
-				LogPlayerEvent(entity, "triggered", "sandvich_healself");
+			case LUNCHBOX_CHOCOLATE:
+			{
+				LogPlayerEvent(entity, "triggered", "dalokohs");
+				new Float:time = GetGameTime();
+				if(time - dalokohs[entity] > 30)
+					LogPlayerEvent(entity, "triggered", "dalokohs_healthboost");
+				dalokohs[entity] = time;
+				if(GetClientHealth(entity) < 350)
+					LogPlayerEvent(entity, "triggered", "dalokohs_healself");
+			}
+			case LUNCHBOX_STEAK:
+			{
+				LogPlayerEvent(entity, "triggered", "steak");
+			}
+			default:
+			{
+				LogPlayerEvent(entity, "triggered", "sandvich");
+				if(GetClientHealth(entity) < 300)
+					LogPlayerEvent(entity, "triggered", "sandvich_healself");
+			}
 		}
 	}
 	return Plugin_Continue;
