@@ -84,7 +84,8 @@ if [[ -n "${REPOSITORY}" && -n "${RELEASE_NUMBER}" ]]; then
 		# Set up where our source repository is and build location.
 		# Check that the build location does not exist.  If it does, delete and create.
 		REPOSITORY=${REPO_HEAD}/${REPOSITORY}
-		BUILD_LOCATION=${TMP_DIR}/${RELEASE_NUMBER}-full
+		BUILD_FOLDER=${RELEASE_NUMBER}-full
+		BUILD_LOCATION=${TMP_DIR}/${BUILD_FOLDER}
 		if [ -d "${BUILD_LOCATION}" ]; then
 			rm -Rf ${BUILD_LOCATION}
 		fi
@@ -214,18 +215,20 @@ if [[ -n "${REPOSITORY}" && -n "${RELEASE_NUMBER}" ]]; then
 	
 	# Build shipping packages
 	echo -ne "[+] Creating compressed packages \\n"
-	cd ${BUILD_LOCATION}
+	cd ${BUILD_LOCATION}/../
+	mv ${BUILD_FOLDER} hlxce-${RELEASE_NUMBER}
 	echo -ne " [+] Creating TGZ package\\n"
-	tar --owner=0 --group=users -czf ${OUTPUT_DIR}/${PKG_PREFIX}${RELEASE_NUMBER}FULL.tar.gz *
+	tar --owner=0 --group=users -czf ${OUTPUT_DIR}/${PKG_PREFIX}${RELEASE_NUMBER}FULL.tar.gz hlxce-${RELEASE_NUMBER}
 	echo -ne " [+] Creating ZIP package\\n"
+	cd hlxce-${RELEASE_NUMBER}
 	zip -rq ${OUTPUT_DIR}/${PKG_PREFIX}${RELEASE_NUMBER}FULL.zip * > /dev/null
 	echo -ne "[+] Packages created\\n\\n"
-
+	cd ../
 	echo -ne "[+] Full package for ${RELEASE_NUMBER} complete.\\n\\n\\n"
 
 
 	# Cleanup
-	rm -Rf ${BUILD_LOCATION}
+	rm -Rf hlxce-${RELEASE_NUMBER}
 
 
 	# Handle upgrade package if necessary.
@@ -234,7 +237,8 @@ if [[ -n "${REPOSITORY}" && -n "${RELEASE_NUMBER}" ]]; then
 
 		# Set up where our source repository is and build location.
 		# Check that the build location does not exist.  If it does, delete and create.
-		BUILD_LOCATION=${TMP_DIR}/${RELEASE_NUMBER}-upgrade
+		BUILD_FOLDER=${RELEASE_NUMBER}-upgrade
+		BUILD_LOCATION=${TMP_DIR}/${BUILD_FOLDER}
 		echo -ne "[+] Creating temporary build location at ${BUILD_LOCATION}.\\n"
 		if [ -d "${BUILD_LOCATION}" ]; then
 			rm -Rf ${BUILD_LOCATION}
@@ -265,6 +269,7 @@ if [[ -n "${REPOSITORY}" && -n "${RELEASE_NUMBER}" ]]; then
 		rm -f ${BUILD_LOCATION}/scripts/hlstats.conf
 		rm -Rf ${BUILD_LOCATION}/scripts/DONOTSHIP
 		rm -Rf ${BUILD_LOCATION}/sql
+		rm -f ${BUILD_LOCATION}/web/config.php
 
 		find ${BUILD_LOCATION}/heatmaps/src/* -type d -exec rm -Rf {} \; &> /dev/null
 
@@ -321,16 +326,18 @@ if [[ -n "${REPOSITORY}" && -n "${RELEASE_NUMBER}" ]]; then
 	
 		# Build shipping packages
 		echo -ne "[+] Creating compressed packages \\n"
-		cd ${BUILD_LOCATION}
+		cd ${BUILD_LOCATION}/../
+		mv ${BUILD_FOLDER} hlxce-${RELEASE_NUMBER}
 		echo -ne " [+] Creating TGZ package\\n"
-		tar --owner=0 --group=users -czf ${OUTPUT_DIR}/${PKG_PREFIX}${RELEASE_NUMBER}UPGRADE.tar.gz *
+		tar --owner=0 --group=users -czf ${OUTPUT_DIR}/${PKG_PREFIX}${RELEASE_NUMBER}UPGRADE.tar.gz hlxce-${RELEASE_NUMBER}/
 		echo -ne " [+] Creating ZIP package\\n"
+		cd hlxce-${RELEASE_NUMBER}
 		zip -rq ${OUTPUT_DIR}/${PKG_PREFIX}${RELEASE_NUMBER}UPGRADE.zip *
 		echo -ne "[+] Packages created\\n\\n"
-
+		cd ../
 		echo -ne "[+] UPGRADE package for ${RELEASE_NUMBER} complete.\\n\\n\\n"
 
-		rm -Rf ${BUILD_LOCATION}	
+		rm -Rf hlxce-${RELEASE_NUMBER}
 	fi
 else
 	echo "Usage: ./build_package.sh TRUNK_NAME RELEASE_NUMBER <UPGRADE_BEGIN_REV>."

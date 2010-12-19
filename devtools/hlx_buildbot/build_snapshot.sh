@@ -52,6 +52,9 @@ SRC_STABLE=/home/hg/repository/hlxce/hlx-16
 # Location to output stable builds
 OUTPUT_STABLE=/home/hg/hlx_buildbot/output/stable
 
+# Temporary build location
+BUILD_LOCATION=/tmp/hlxce-build-snapshot
+
 # Package Prefix
 # Example: HLXCommunityEdition
 PKG_PREFIX=HLXCE-snapshot-
@@ -81,6 +84,9 @@ else
 	echo 1 > ${COUNTER_FILE}
 fi
 
+# Set our build folder variable
+BUILD_FOLDER=${PKG_PREFIX}${SNAPSHOT_COUNTER}
+
 
 # Determine which branch (or both) to build
 
@@ -101,33 +107,37 @@ if [ ${BUILD_DEV} == 1 ]; then
 	/usr/bin/hg pull > /dev/null
 	/usr/bin/hg update -C > /dev/null
 
+	# Prepare build location
+	/usr/bin/hg archive ${BUILD_LOCATION}/${BUILD_FOLDER}
+	cd ${BUILD_LOCATION}/${BUILD_FOLDER}
+	
 	# Remove directories that should not be in the shipped packages
 	echo -ne "[+] Removing unneeded/unshipable files and folders\\n"
 	
-	rm -Rf ${SRC_DEV}/build
-	rm -Rf ${SRC_DEV}/extras
-	rm -Rf ${SRC_DEV}/scripts/DONOTSHIP
-	find ${SRC_DEV}/heatmaps/src/* -type d -exec rm -Rf {} \; &> /dev/null
+	rm -Rf build
+	rm -Rf extras
+	rm -Rf scripts/DONOTSHIP
+	find heatmaps/src/* -type d -exec rm -Rf {} \; &> /dev/null
 
 
 	# Set additional permissions on folders
 	echo -ne "[+] Setting permissions on hlstatsimg/games directory\\n"
-	find ${SRC_DEV}/web/hlstatsimg/games/ -type d -exec chmod 777 {} \; &> /dev/null
+	find web/hlstatsimg/games/ -type d -exec chmod 777 {} \; &> /dev/null
 
 	# Symlink the HLXCE plugins and compile
 	echo -ne "[+] Setting up symlinks for HLXCE plugin compile\\n\\n"
-	ln -fs ${SRC_DEV}/sourcemod/scripting/*.sp ${SOURCEMOD_DIR}/ &> /dev/null
-	ln -fs ${SRC_DEV}/sourcemod/scripting/include/*.inc ${SOURCEMOD_DIR}/include/ &> /dev/null
-	ln -fs ${SRC_DEV}/amxmodx/scripting/*.sma ${AMXMODX_DIR}/ &> /dev/null
-	mkdir ${SRC_DEV}/sourcemod/plugins &> /dev/null
-	mkdir ${SRC_DEV}/amxmodx/plugins &> /dev/null
+	ln -fs ${BUILD_LOCATION}/${BUILD_FOLDER}/sourcemod/scripting/*.sp ${SOURCEMOD_DIR}/ &> /dev/null
+	ln -fs ${BUILD_LOCATION}/${BUILD_FOLDER}/sourcemod/scripting/include/*.inc ${SOURCEMOD_DIR}/include/ &> /dev/null
+	ln -fs ${BUILD_LOCATION}/${BUILD_FOLDER}/amxmodx/scripting/*.sma ${AMXMODX_DIR}/ &> /dev/null
+	mkdir sourcemod/plugins &> /dev/null
+	mkdir amxmodx/plugins &> /dev/null
 
 	echo -ne "[+] Compiling SourceMod Plugin\\n"
 	cd ${SOURCEMOD_DIR}
 	for sm_source in hlstats*.sp
 	do
 			smxfile="`echo ${sm_source} | sed -e 's/\.sp$/.smx/'`"
-			./spcomp ${sm_source} -o${SRC_DEV}/sourcemod/plugins/${smxfile} | grep -q Error
+			./spcomp ${sm_source} -o${BUILD_LOCATION}/${BUILD_FOLDER}/sourcemod/plugins/${smxfile} | grep -q Error
 			if [ $? = 0 ]; then
 					echo " [!] WARNING: ${smxfile} DID NOT COMPILE SUCCESSFULLY."
 					exit
@@ -136,13 +146,19 @@ if [ ${BUILD_DEV} == 1 ]; then
 			fi
 	done
 	echo -ne "[+] SourceMod plugins compiled \\n\\n"
-
+	
+	# Do some cleanup
+	cd ${BUILD_LOCATION}/${BUILD_FOLDER}/sourcemod/scripting
+	find *.sp -type f -exec rm ${SOURCEMOD_DIR}/{} \;
+	cd include
+	find *.inc -type f -exec rm ${SOURCEMOD_DIR}/include/{} \;	
+	
 	echo -ne "[+] Compiling AMXMODX plugins\\n"
 	cd ${AMXMODX_DIR}
 	for amx_source in hlstatsx_*.sma
 	do
 			amxxfile="`echo ${amx_source} | sed -e 's/\.sma$/.amxx/'`"
-			./amxxpc ${amx_source} -o${SRC_DEV}/amxmodx/plugins/${amxxfile} | grep -q Done
+			./amxxpc ${amx_source} -o${BUILD_LOCATION}/${BUILD_FOLDER}/amxmodx/plugins/${amxxfile} | grep -q Done
 			if [ $? -eq 0 ]; then
 					echo " [+] ${amxxfile} compiled successfully"
 			else
@@ -152,12 +168,17 @@ if [ ${BUILD_DEV} == 1 ]; then
 	done
 	echo -ne "[+] AMXMODX plugins compiled \\n\\n"
 
+	# Do some cleanup
+	cd ${BUILD_LOCATION}/${BUILD_FOLDER}/amxmodx/scripting
+	find *.sma -type f -exec rm ${AMXMODX_DIR}/{} \;		
+	
 	# Build shipping packages
 	echo -ne "[+] Creating compressed development packages (#${SNAPSHOT_COUNTER})\\n"
-	cd ${SRC_DEV}
+	cd ${BUILD_LOCATION}
 	echo -ne " [+] Creating TGZ package\\n"
-	tar --owner=0 --group=users -czf ${OUTPUT_DEV}/${PKG_PREFIX}${SNAPSHOT_COUNTER}.tar.gz *
+	tar --owner=0 --group=users -czf ${OUTPUT_DEV}/${PKG_PREFIX}${SNAPSHOT_COUNTER}.tar.gz ${BUILD_FOLDER}
 	echo -ne " [+] Creating ZIP package\\n"
+	cd ${BUILD_FOLDER}
 	zip -r ${OUTPUT_DEV}/${PKG_PREFIX}${SNAPSHOT_COUNTER}.zip * > /dev/null
 	echo -ne "[+] Packages created\\n\\n"
 
@@ -166,7 +187,9 @@ if [ ${BUILD_DEV} == 1 ]; then
 	rm -f `ls -t | tail -n +11`
 
 	echo -ne "[+] Build for #${SNAPSHOT_COUNTER} complete.\\n\\n\\n"
-
+	
+	# Cleanup build package
+	rm -Rf ${BUILD_LOCATION}/${BUILD_FOLDER}
 	SNAPSHOT_COUNTER=$((SNAPSHOT_COUNTER+1))
 fi
 
@@ -181,26 +204,30 @@ if [ ${BUILD_STABLE} == 1 ]; then
 	/usr/bin/hg pull > /dev/null
 	/usr/bin/hg update -C > /dev/null
 
+	# Prepare build location
+	/usr/bin/hg archive ${BUILD_LOCATION}/${BUILD_FOLDER}
+	cd ${BUILD_LOCATION}/${BUILD_FOLDER}
+	
 	# Remove directories that should not be in the shipped packages
 	echo -ne "[+] Removing unneeded/unshipable files and folders\\n"
 	
-	rm -Rf ${SRC_STABLE}/build
-	rm -Rf ${SRC_STABLE}/extras
-	rm -Rf ${SRC_STABLE}/scripts/DONOTSHIP
-	find ${SRC_STABLE}/heatmaps/src/* -type d -exec rm -Rf {} \; &> /dev/null
+	rm -Rf build
+	rm -Rf extras
+	rm -Rf scripts/DONOTSHIP
+	find heatmaps/src/* -type d -exec rm -Rf {} \; &> /dev/null
 
 
 	# Set additional permissions on folders
 	echo -ne "[+] Setting permissions on hlstatsimg/games directory\\n"
-	find ${SRC_STABLE}/web/hlstatsimg/games/ -type d -exec chmod 777 {} \; &> /dev/null
+	find web/hlstatsimg/games/ -type d -exec chmod 777 {} \; &> /dev/null
 
 	# Symlink the source code for SourceMod and AMXModX plugins
 	echo -ne "[+] Setting up symlinks for HLXCE plugin compile\\n\\n"
-	ln -fs ${SRC_STABLE}/sourcemod/scripting/*.sp ${SOURCEMOD_DIR}/ &> /dev/null
-	ln -fs ${SRC_STABLE}/sourcemod/scripting/include/*.inc ${SOURCEMOD_DIR}/include/ &> /dev/null
-	ln -fs ${SRC_STABLE}/amxmodx/scripting/*.sma ${AMXMODX_DIR}/ &> /dev/null
-	mkdir ${SRC_STABLE}/sourcemod/plugins &> /dev/null
-	mkdir ${SRC_STABLE}/amxmodx/plugins &> /dev/null
+	ln -fs ${BUILD_LOCATION}/${BUILD_FOLDER}/sourcemod/scripting/*.sp ${SOURCEMOD_DIR}/ &> /dev/null
+	ln -fs ${BUILD_LOCATION}/${BUILD_FOLDER}/sourcemod/scripting/include/*.inc ${SOURCEMOD_DIR}/include/ &> /dev/null
+	ln -fs ${BUILD_LOCATION}/${BUILD_FOLDER}/amxmodx/scripting/*.sma ${AMXMODX_DIR}/ &> /dev/null
+	mkdir sourcemod/plugins &> /dev/null
+	mkdir amxmodx/plugins &> /dev/null
 
 	# Compile the SourceMod plugin
 	echo -ne "[+] Compiling SourceMod Plugins\\n"
@@ -208,7 +235,7 @@ if [ ${BUILD_STABLE} == 1 ]; then
 	for sm_source in hlstats*.sp
 	do
 			smxfile="`echo ${sm_source} | sed -e 's/\.sp$/.smx/'`"
-			./spcomp ${sm_source} -o${SRC_STABLE}/sourcemod/plugins/${smxfile} | grep -q Error
+			./spcomp ${sm_source} -o${BUILD_LOCATION}/${BUILD_FOLDER}/sourcemod/plugins/${smxfile} | grep -q Error
 			if [ $? = 0 ]; then
 					echo " [!] WARNING: ${smxfile} DID NOT COMPILE SUCCESSFULLY."
 					exit
@@ -218,7 +245,7 @@ if [ ${BUILD_STABLE} == 1 ]; then
 	done
 	echo -ne "[+] SourceMod plugins compiled \\n\\n"
 	# Do some cleanup
-	cd ${SRC_STABLE}/sourcemod/scripting
+	cd ${BUILD_LOCATION}/${BUILD_FOLDER}/sourcemod/scripting
 	find *.sp -type f -exec rm ${SOURCEMOD_DIR}/{} \;
 	cd include
 	find *.inc -type f -exec rm ${SOURCEMOD_DIR}/include/{} \;		
@@ -229,7 +256,7 @@ if [ ${BUILD_STABLE} == 1 ]; then
 	for amx_source in hlstatsx_*.sma
 	do
 			amxxfile="`echo ${amx_source} | sed -e 's/\.sma$/.amxx/'`"
-			./amxxpc ${amx_source} -o${SRC_STABLE}/amxmodx/plugins/${amxxfile} | grep -q Done
+			./amxxpc ${amx_source} -o${BUILD_LOCATION}/${BUILD_FOLDER}/amxmodx/plugins/${amxxfile} | grep -q Done
 			if [ $? -eq 0 ]; then
 					echo " [+] ${amxxfile} compiled successfully"
 			else
@@ -239,22 +266,24 @@ if [ ${BUILD_STABLE} == 1 ]; then
 	done
 	echo -ne "[+] AMXMODX plugins compiled \\n\\n"
 	# Do some cleanup
-	cd ${SRC_STABLE}/amxmodx/scripting
+	cd ${BUILD_LOCATION}/${BUILD_FOLDER}/amxmodx/scripting
 	find *.sma -type f -exec rm ${AMXMODX_DIR}/{} \;		
 
 	# Build shipping packages
-	cd ${SRC_STABLE}
+	cd ${BUILD_LOCATION}
 	echo -ne "[+] Creating compressed stable packages (#${SNAPSHOT_COUNTER})\\n"
 	echo -ne " [+] Creating TGZ package\\n"
-	tar --owner=0 --group=users -czf ${OUTPUT_STABLE}/${PKG_PREFIX}${SNAPSHOT_COUNTER}.tar.gz *
+	tar --owner=0 --group=users -czf ${OUTPUT_STABLE}/${PKG_PREFIX}${SNAPSHOT_COUNTER}.tar.gz ${BUILD_FOLDER}
 	echo -ne " [+] Creating ZIP package\\n"
+	cd ${BUILD_FOLDER}
 	zip -r ${OUTPUT_STABLE}/${PKG_PREFIX}${SNAPSHOT_COUNTER}.zip * > /dev/null
 	echo -ne "[+] Packages created\\n\\n"
 
 	echo -ne "[+] Cleaning up old packages\\n\\n"
-        cd ${OUTPUT_STABLE}
-        rm -f `ls -t | tail -n +11`
-
+    cd ${OUTPUT_STABLE}
+    rm -f `ls -t | tail -n +11`
+	cd ${BUILD_FOLDER}
+	rm -Rf ${BUILD_LOCATION}/${$BUILD_FOLDER}
 	echo -ne "[+] Build for #${SNAPSHOT_COUNTER} complete.\\n"
 	SNAPSHOT_COUNTER=$((SNAPSHOT_COUNTER+0001))
 fi
