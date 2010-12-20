@@ -50,9 +50,12 @@ if (isset($_POST['form_submitted']) && ($_POST['form_submitted'] == 1))
 
 <body>
 	<h2>HLstatsX Community Edition &mdash; Build Bot wrapper</h2>
-	<p>To build a release package fill out the appropriate fields below.  Packages will be placed in <a href="/release/">the release directory</a> when they are complete.  The output from the build script can be found below.</p>
+	<p>To build a release package fill out the appropriate fields below.<br />
+  Packages will be placed in <a href="/release/">the release directory</a> when they are complete.<br /><br />
+  After build, the <a href="upload.php">Google Code Upload Script</a> can help get the files on GCode.<br /><br />
+  The output from the build script can be found below.</p>
 
-	<form action="build.php" method="post">
+	<form action="<?php echo $PHP_SELF; ?>" method="post">
 		<label for="release_number">Release Number: </label>
 		<input type="text" name="release_number" value="<?php echo $release_number; ?>">
 		<br /><br />
@@ -73,12 +76,14 @@ if (isset($_POST['form_submitted']) && ($_POST['form_submitted'] == 1))
 <?php
 
 	if ($form_submitted) {
+    echo '<p>Once the build is complete, you can <a href="upload.php">upload files to Google Code</a>.</p>';
 		echo '<textarea id="shell_output">';
 		$repository = escapeshellarg($repository);
 		$release_number = escapeshellarg($release_number);
 		$upgrade_rev = escapeshellarg($upgrade_rev);
 		passthru("/usr/bin/sudo -u hg /home/hg/hlx_buildbot/build_release.sh $repository $release_number $upgrade_rev $test_only");
 		echo '</textarea>';
+
 	}
 ?>
 
