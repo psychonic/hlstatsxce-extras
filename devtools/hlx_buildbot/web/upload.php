@@ -42,8 +42,8 @@ if (isset($_POST['submit']))
 {
   if (!empty($_POST['username']) && !empty($_POST['password']))
   {
-    $username = $_POST['username'];
-    $password = $_POST['password'];
+    $username = escapeshellarg($_POST['username']);
+    $password = escapeshellarg($_POST['password']);
     
 
     // Loop through each file and pull appropriate items from _POST
@@ -56,8 +56,8 @@ if (isset($_POST['submit']))
         if (isset($_POST["{$enc_file}-upload"]))
         {
           // File should be uploaded -- get the post variables for it and go
-          $summary = $_POST["{$enc_file}-summary"];
-          $labels = $_POST["{$enc_file}-labels"];
+          $summary = escapeshellarg($_POST["{$enc_file}-summary"]);
+          $labels = escapeshellarg($_POST["{$enc_file}-labels"]);
           print "<p>Attempting to upload $file to Google Code...<br />";
           exec("$google_script -p hlstatsxcommunity -s \"$summary\" -u $username -w $password -l \"$labels\" $package_dir/$file", $output, $return);
           if ($return == 0)
