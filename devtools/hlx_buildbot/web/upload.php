@@ -59,7 +59,7 @@ if (isset($_POST['submit']))
           $summary = escapeshellarg($_POST["{$enc_file}-summary"]);
           $labels = escapeshellarg($_POST["{$enc_file}-labels"]);
           print "<p>Attempting to upload $file to Google Code...<br />";
-          exec("$google_script -p hlstatsxcommunity -s \"$summary\" -u $username -w $password -l \"$labels\" $package_dir/$file", $output, $return);
+          exec("$google_script -p hlstatsxcommunity -s $summary -u $username -w $password -l $labels $package_dir/$file", $output, $return);
           if ($return == 0)
           {
             print "$file uploaded successfully.</p>";
