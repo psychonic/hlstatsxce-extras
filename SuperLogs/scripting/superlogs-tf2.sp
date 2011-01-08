@@ -28,7 +28,7 @@
 #include <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 #define REQUIRE_EXTENSIONS
 
-#define VERSION "2.0.24"
+#define VERSION "2.0.25"
 #define NAME "SuperLogs: TF2"
 
 #define UNLOCKABLE_BIT (1<<30)
@@ -1125,7 +1125,7 @@ public Action:CheckPlayerLoadout(Handle:timer, any:userid)
 		CreateTimer(0.2, LogWeaponLoadout, userid);
 		return Plugin_Stop;
 	}
-	if(newLoadout)
+	if (newLoadout)
 		LogWeaponLoadout(INVALID_HANDLE, userid);
 		
 	return Plugin_Stop;
@@ -1134,9 +1134,9 @@ public Action:CheckPlayerLoadout(Handle:timer, any:userid)
 public Action:LogWeaponLoadout(Handle:timer, any:userid)
 {
 	new client = GetClientOfUserId(userid);
-	if(client > 0 && IsClientInGame(client))
+	if (client > 0 && IsClientInGame(client))
 	{
-		for(new i = 0; i < MAX_LOADOUT_SLOTS; i++)
+		for (new i = 0; i < MAX_LOADOUT_SLOTS; i++)
 		{
 			if(playerLoadout[client][i][0] != -1 && !IsValidEntity(playerLoadout[client][i][1]) || playerLoadout[client][i][1] == 0)
 			{
@@ -1144,15 +1144,14 @@ public Action:LogWeaponLoadout(Handle:timer, any:userid)
 				playerLoadoutUpdated[client] = true;
 			}
 		}
-		if(playerLoadoutUpdated[client] == false)
+		if (playerLoadoutUpdated[client] == false)
 			return Plugin_Stop;
 		playerLoadoutUpdated[client] = false;
-		if(client > 0 && IsClientInGame(client))
-		{
-			decl String:logString[255];
-			Format(logString, sizeof(logString), " (primary \"%d\") (secondary \"%d\") (melee \"%d\") (pda \"%d\") (pda2 \"%d\") (building \"%d\") (head \"%d\") (misc \"%d\")", playerLoadout[client][0][0], playerLoadout[client][1][0], playerLoadout[client][2][0], playerLoadout[client][3][0], playerLoadout[client][4][0], playerLoadout[client][5][0], playerLoadout[client][6][0], playerLoadout[client][7][0]);
-			LogPlayerEvent(client, "triggered", "player_loadout", _, logString);
-		}
+		
+		decl String:logString[255];
+		Format(logString, sizeof(logString), " (primary \"%d\") (secondary \"%d\") (melee \"%d\") (pda \"%d\") (pda2 \"%d\") (building \"%d\") (head \"%d\") (misc \"%d\")", playerLoadout[client][0][0], playerLoadout[client][1][0], playerLoadout[client][2][0], playerLoadout[client][3][0], playerLoadout[client][4][0], playerLoadout[client][5][0], playerLoadout[client][6][0], playerLoadout[client][7][0]);
+		
+		LogPlayerEvent(client, "triggered", "player_loadout", _, logString);
 	}
 	return Plugin_Stop;
 }
