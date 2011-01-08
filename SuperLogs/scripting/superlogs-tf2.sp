@@ -28,7 +28,7 @@
 #include <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 #define REQUIRE_EXTENSIONS
 
-#define VERSION "2.0.23"
+#define VERSION "2.0.24"
 #define NAME "SuperLogs: TF2"
 
 #define UNLOCKABLE_BIT (1<<30)
@@ -911,8 +911,6 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 		inflictor = 0;
 	}
 	
-	new bool:bAlteredLog = false;
-	
 	switch (customkill)
 	{
 		case TF_CUSTOM_HEADSHOT:
@@ -933,7 +931,6 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 				if(logweapon[0] != 'd') // No changing reflects - was 'r' but it is deflects
 				{
 					SetEventString(event, "weapon_logclassname", "tf_projectile_arrow_fire");
-					bAlteredLog = true;
 				}
 			}
 		case TF_CUSTOM_TAUNT_UBERSLICE:
@@ -941,7 +938,6 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 				if(GetEventInt(event, "weaponid") == TF_WEAPON_BONESAW)
 				{
 					SetEventString(event, "weapon_logclassname", "taunt_medic");
-					bAlteredLog = true;
 				}
 			}
 		
@@ -949,103 +945,6 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 			{
 				LogPlayerEvent(attacker, "triggered", "killed_by_horseman", true);
 			}
-	}
-	
-	if (!bAlteredLog && inflictor > 0)
-	{
-		// check for blackbox, bushwacka, glovesurgent, sydneysleeper
-		switch (weapon)
-		{
-			case TF_WEAPON_CLUB:
-				{
-					if (inflictor > 0 && inflictor <= MaxClients && IsClientInGame(inflictor))
-					{
-						new weaponent = GetEntPropEnt(inflictor, Prop_Send, "m_hActiveWeapon");
-						if (weaponent > -1 && GetEntProp(weaponent, Prop_Send, "m_iItemDefinitionIndex") == 232)
-						{
-							SetEventString(event, "weapon_logclassname", "bushwacka");
-						}
-					}
-				}
-			case TF_WEAPON_FISTS:
-				{
-					if (inflictor > 0 && inflictor <= MaxClients && IsClientInGame(inflictor))
-					{
-						new weaponent = GetEntPropEnt(inflictor, Prop_Send, "m_hActiveWeapon");
-						if (weaponent > -1 && GetEntProp(weaponent, Prop_Send, "m_iItemDefinitionIndex") == 239)
-						{
-							SetEventString(event, "weapon_logclassname", "glovesurgent");
-						}
-					}
-				}
-			case TF_WEAPON_SNIPERRIFLE:
-				{
-					if (inflictor > 0 && inflictor <= MaxClients && IsClientInGame(inflictor))
-					{
-						new weaponent = GetEntPropEnt(inflictor, Prop_Send, "m_hActiveWeapon");
-						if (weaponent > -1 && GetEntProp(weaponent, Prop_Send, "m_iItemDefinitionIndex") == 230)
-						{
-							SetEventString(event, "weapon_logclassname", "sydneysleeper");
-						}
-					}
-				}
-			case TF_WEAPON_MINIGUN:
-				{
-					if (inflictor > 0 && inflictor <= MaxClients && IsClientInGame(inflictor))
-					{
-						new weaponent = GetEntPropEnt(inflictor, Prop_Send, "m_hActiveWeapon");
-						if (weaponent > -1 && GetEntProp(weaponent, Prop_Send, "m_iItemDefinitionIndex") == 312)
-						{
-							SetEventString(event, "weapon_logclassname", "brassbeast");
-						}
-					}
-				}
-			case TF_WEAPON_ROCKETLAUNCHER:
-				{
-					if (inflictor > MaxClients)
-					{
-						new owner = GetEntPropEnt(inflictor, Prop_Send, "m_hOwnerEntity");
-						if (owner > 0 && owner <= MaxClients && IsClientInGame(owner))
-						{
-							new weaponent = GetPlayerWeaponSlot(owner, 0);
-							if (weaponent > 0 && IsValidEdict(weaponent)
-								&& GetEntProp(weaponent, Prop_Send, "m_iItemDefinitionIndex") == 228
-								)
-							{
-								SetEventString(event, "weapon_logclassname", "blackbox");
-							}
-						}
-					}
-				}
-			case TF_WEAPON_GRENADE_DEMOMAN:
-				{
-					if (inflictor > MaxClients)
-					{
-						new owner = GetEntPropEnt(inflictor, Prop_Send, "m_hThrower");
-						if (owner > 0 && owner <= MaxClients && IsClientInGame(owner))
-						{
-							new weaponent = GetPlayerWeaponSlot(owner, 0);
-							if (weaponent > 0 && IsValidEdict(weaponent)
-								&& GetEntProp(weaponent, Prop_Send, "m_iItemDefinitionIndex") == 308
-								)
-							{
-								SetEventString(event, "weapon_logclassname", "lochnload");
-							}
-						}
-					}
-				}
-			case TF_WEAPON_SWORD:
-				{
-					if (inflictor > 0 && inflictor <= MaxClients && IsClientInGame(inflictor))
-					{
-						new weaponent = GetEntPropEnt(inflictor, Prop_Send, "m_hActiveWeapon");
-						if (weaponent > -1 && GetEntProp(weaponent, Prop_Send, "m_iItemDefinitionIndex") == 327)
-						{
-							SetEventString(event, "weapon_logclassname", "claidheamohmor");
-						}
-					}
-				}
-		}
 	}
 	
 	if (inflictor > MaxClients)
