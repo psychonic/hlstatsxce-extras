@@ -50,6 +50,12 @@ namespace HLXCEServ
 				SetupEmail();
 			}
 
+			if (!File.Exists(g_strPerlPath + @"\perl.exe"))
+			{
+				DoError(String.Format("Failed to find {0:s}. Check your PerlPath setting in HLXCEServ.exe.config", g_strPerlPath + @"\perl.exe"));
+				this.Stop();
+			}
+
             for (ushort i = 0; i < g_iDaemonCount; i++)
             {
                 g_liDaemonRetries.Add(0);
