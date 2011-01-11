@@ -908,7 +908,6 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 	new attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
 	new victim = GetClientOfUserId(GetEventInt(event, "userid"));
 	new customkill = GetEventInt(event, "customkill");
-	new weapon = GetEventInt(event, "weaponid");
 	new inflictor = GetEventInt(event, "inflictor_entindex");
 	if (!IsValidEdict(inflictor))
 	{
