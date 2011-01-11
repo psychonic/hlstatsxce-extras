@@ -28,23 +28,24 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.HLXCEServProcessInstaller1 = new System.ServiceProcess.ServiceProcessInstaller();
-            this.HLXCEServInstaller = new System.ServiceProcess.ServiceInstaller();
-            // 
-            // HLXCEServProcessInstaller1
-            // 
-            this.HLXCEServProcessInstaller1.Password = null;
-            this.HLXCEServProcessInstaller1.Username = null;
-            // 
-            // HLXCEServInstaller
-            // 
-            this.HLXCEServInstaller.Description = "Windows Service Control for HLX:CE";
-            this.HLXCEServInstaller.DisplayName = "HLXCEServ";
-            this.HLXCEServInstaller.ServiceName = "HLXCEServ";
-            // 
-            // ProjectInstaller
-            // 
-            this.Installers.AddRange(new System.Configuration.Install.Installer[] {
+			this.HLXCEServProcessInstaller1 = new System.ServiceProcess.ServiceProcessInstaller();
+			this.HLXCEServInstaller = new System.ServiceProcess.ServiceInstaller();
+			// 
+			// HLXCEServProcessInstaller1
+			// 
+			this.HLXCEServProcessInstaller1.Account = System.ServiceProcess.ServiceAccount.NetworkService;
+			this.HLXCEServProcessInstaller1.Password = null;
+			this.HLXCEServProcessInstaller1.Username = null;
+			// 
+			// HLXCEServInstaller
+			// 
+			this.HLXCEServInstaller.Description = "Windows Service Control for HLX:CE";
+			this.HLXCEServInstaller.DisplayName = "HLXCEServ";
+			this.HLXCEServInstaller.ServiceName = "HLXCEServ";
+			// 
+			// ProjectInstaller
+			// 
+			this.Installers.AddRange(new System.Configuration.Install.Installer[] {
             this.HLXCEServProcessInstaller1,
             this.HLXCEServInstaller});
 
