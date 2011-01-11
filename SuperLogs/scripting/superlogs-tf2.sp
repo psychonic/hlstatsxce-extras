@@ -768,12 +768,14 @@ public Event_PlayerHurt(Handle:event, const String:name[], bool:dontBroadcast)
 	}
 }
 
-public Event_ObjectDestroyedPre(Handle:event, const String:name[], bool:dontBroadcast)
+public Action:Event_ObjectDestroyedPre(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	if (GetEntProp(GetEventInt(event, "index"), Prop_Send, "m_bMiniBuilding", 1))
 	{
 		g_bBlockLog = true;
 	}
+	
+	return Plugin_Continue;
 }
 
 public Event_ObjectDestroyed(Handle:event, const String:name[], bool:dontBroadcast)
@@ -797,12 +799,14 @@ public Event_ObjectDestroyed(Handle:event, const String:name[], bool:dontBroadca
 	}
 }
 
-public Event_PlayerBuiltObjectPre(Handle:event, const String:name[], bool:dontBroadcast)
+public Action:Event_PlayerBuiltObjectPre(Handle:event, const String:name[], bool:dontBroadcast)
 {
 	if (g_bCarryingObject[GetClientOfUserId(GetEventInt(event, "userid"))] || GetEntProp(GetEventInt(event, "index"), Prop_Send, "m_bMiniBuilding", 1))
 	{
 		g_bBlockLog = true;
 	}
+	
+	return Plugin_Continue;
 }
 
 public Event_PlayerBuiltObject(Handle:event, const String:name[], bool:dontBroadcast)
