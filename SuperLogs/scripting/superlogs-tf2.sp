@@ -28,7 +28,7 @@
 #include <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 #define REQUIRE_EXTENSIONS
 
-#define VERSION "2.0.25"
+#define VERSION "2.0.26"
 #define NAME "SuperLogs: TF2"
 
 #define UNLOCKABLE_BIT (1<<30)
@@ -949,16 +949,6 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 			{
 				LogPlayerEvent(attacker, "triggered", "killed_by_horseman", true);
 			}
-	}
-	
-	if (inflictor > MaxClients)
-	{
-		decl String:clsname[64];
-		GetEdictClassname(inflictor, clsname, sizeof(clsname));
-		if (!strcmp(clsname, "obj_sentrygun") && GetEntProp(inflictor, Prop_Send, "m_bMiniBuilding", 1))
-		{
-			SetEventString(event, "weapon_logclassname", "obj_sentrygun_mini");
-		}
 	}
 	
 	return Plugin_Continue;
