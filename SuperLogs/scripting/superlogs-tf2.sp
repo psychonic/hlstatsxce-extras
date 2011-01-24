@@ -326,6 +326,8 @@ public Action:TF2_CalcIsAttackCritical(attacker, weapon, String:weaponname[], &b
 				nextHurt[attacker] = weapon_index;
 		}
 	}
+	
+	return Plugin_Continue;
 }
 
 public OnAllPluginsLoaded()
