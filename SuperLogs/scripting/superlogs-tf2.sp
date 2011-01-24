@@ -28,7 +28,7 @@
 #include <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 #define REQUIRE_EXTENSIONS
 
-#define VERSION "2.0.26"
+#define VERSION "2.0.27"
 #define NAME "SuperLogs: TF2"
 
 #define UNLOCKABLE_BIT (1<<30)
@@ -943,6 +943,10 @@ public Action:Event_PlayerDeathPre(Handle:event, const String:name[], bool:dontB
 				if(GetEventInt(event, "weaponid") == TF_WEAPON_BONESAW)
 				{
 					SetEventString(event, "weapon_logclassname", "taunt_medic");
+					
+					// Might as well fix the kill icon, too, as long as we're here
+					// Courtesy of FlaminSarge
+					SetEventString(event, "weapon", "taunt_medic");
 				}
 			}
 		
