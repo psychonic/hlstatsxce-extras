@@ -180,7 +180,10 @@ if [ ${BUILD_DEV} == 1 ]; then
 	echo -ne " [+] Creating ZIP package\\n"
 	cd ${BUILD_FOLDER}
 	zip -r ${OUTPUT_DEV}/${PKG_PREFIX}${SNAPSHOT_COUNTER}.zip * > /dev/null
-	echo -ne "[+] Packages created\\n\\n"
+	echo -ne "[+] Packages created\\n"
+	ln -fs ${PKG_PREFIX}${SNAPSHOT_COUNTER}.tar.gz ${OUTPUT_STABLE}/${PKG_PREFIX}latest.tar.gz
+	ln -fs ${PKG_PREFIX}${SNAPSHOT_COUNTER}.zip ${OUTPUT_STABLE}/${PKG_PREFIX}latest.zip
+	echo -ne "[+] Updated latest symlinks\\n\\n"
 
 	echo -ne "[+] Cleaning up old packages\\n\\n"
 	cd ${OUTPUT_DEV}
@@ -277,7 +280,10 @@ if [ ${BUILD_STABLE} == 1 ]; then
 	echo -ne " [+] Creating ZIP package\\n"
 	cd ${BUILD_FOLDER}
 	zip -r ${OUTPUT_STABLE}/${PKG_PREFIX}${SNAPSHOT_COUNTER}.zip * > /dev/null
-	echo -ne "[+] Packages created\\n\\n"
+	echo -ne "[+] Packages created\\n"
+	ln -fs ${PKG_PREFIX}${SNAPSHOT_COUNTER}.tar.gz ${OUTPUT_STABLE}/${PKG_PREFIX}latest.tar.gz
+	ln -fs ${PKG_PREFIX}${SNAPSHOT_COUNTER}.zip ${OUTPUT_STABLE}/${PKG_PREFIX}latest.zip
+	echo -ne "[+] Updated latest symlinks\\n\\n"
 
 	echo -ne "[+] Cleaning up old packages\\n\\n"
     cd ${OUTPUT_STABLE}
