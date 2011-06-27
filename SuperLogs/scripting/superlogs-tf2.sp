@@ -28,7 +28,7 @@
 #include <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 #define REQUIRE_EXTENSIONS
 
-#define VERSION "2.0.27"
+#define VERSION "2.0.28"
 #define NAME "SuperLogs: TF2"
 
 #define UNLOCKABLE_BIT (1<<30)
@@ -1165,12 +1165,12 @@ public Action:Event_PlayerJarated(UserMsg:msg_id, Handle:bf, const players[], pl
 		return Plugin_Continue;
 	}
 	
-	new cond = TF2_GetPlayerConditionFlags(victim);	
-	if ((cond & TF_CONDFLAG_JARATED) == TF_CONDFLAG_JARATED)
+
+  if (TF2_IsPlayerInCondition(victim, TFCond_Jarated))
 	{
 		LogPlyrPlyrEvent(client, victim, "triggered", "jarate", true);
 	}
-	else if ((cond & TF_CONDFLAG_MILKED) == TF_CONDFLAG_MILKED)
+	else if (TF2_IsPlayerInCondition(victim, TFCond_Milked))
 	{
 		LogPlyrPlyrEvent(client, victim, "triggered", "madmilk", true);
 	}
