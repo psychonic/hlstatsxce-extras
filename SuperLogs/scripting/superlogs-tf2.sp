@@ -1166,7 +1166,7 @@ public Action:Event_PlayerJarated(UserMsg:msg_id, Handle:bf, const players[], pl
 	}
 	
 
-  if (TF2_IsPlayerInCondition(victim, TFCond_Jarated))
+	if (TF2_IsPlayerInCondition(victim, TFCond_Jarated))
 	{
 		LogPlyrPlyrEvent(client, victim, "triggered", "jarate", true);
 	}
