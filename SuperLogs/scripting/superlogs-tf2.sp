@@ -28,7 +28,7 @@
 #include <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 #define REQUIRE_EXTENSIONS
 
-#define VERSION "2.0.29"
+#define VERSION "2.0.30"
 #define NAME "SuperLogs: TF2"
 
 #define UNLOCKABLE_BIT (1<<30)
@@ -85,7 +85,6 @@ new Handle:cvar_wstats;
 new Handle:cvar_heals;
 new Handle:cvar_rolelogfix;
 new Handle:cvar_objlogfix;
-new Handle:cvar_version;
 
 // Booleans to keep track of them
 new bool:b_actions;
@@ -214,7 +213,7 @@ public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
 
 public OnPluginStart()
 {
-	cvar_version = CreateConVar("superlogs_tf_version", VERSION, NAME, FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
+	CreateConVar("superlogs_tf_version", VERSION, NAME, FCVAR_PLUGIN|FCVAR_NOTIFY);
 
 	cvar_crits = FindConVar("tf_weapon_criticals");
 	cvar_actions = CreateConVar("superlogs_actions", "1", "Enable logging of most player actions, such as \"stun\" (default on)", 0, true, 0.0, true, 1.0);
@@ -308,10 +307,6 @@ public OnConfigsExecuted()
 	OnConVarHealsChange(cvar_heals, "", "");
 	OnConVarRolelogfixChange(cvar_rolelogfix, "", "");
 	OnConVarObjlogfixChange(cvar_objlogfix, "", "");
-	
-	decl String:version[255];
-	GetConVarString(cvar_version, version, sizeof(version));
-	SetConVarString(cvar_version, version);
 }
 
 public Action:TF2_CalcIsAttackCritical(attacker, weapon, String:weaponname[], &bool:result)
