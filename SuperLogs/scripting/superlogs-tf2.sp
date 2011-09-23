@@ -28,7 +28,7 @@
 #include <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 #define REQUIRE_EXTENSIONS
 
-#define VERSION "2.0.28"
+#define VERSION "2.0.29"
 #define NAME "SuperLogs: TF2"
 
 #define UNLOCKABLE_BIT (1<<30)
@@ -797,7 +797,7 @@ public Event_ObjectDestroyed(Handle:event, const String:name[], bool:dontBroadca
 		GetClientAuthString(victim, auth, sizeof(auth));
 		GetTeamName(GetClientTeam(victim), team, sizeof(team));
 		Format(properties, sizeof(properties), " (object \"OBJ_SENTRYGUN_MINI\") (weapon \"%s\") (objectowner \"%N<%d><%s><%s>\")", weapon, victim, victimuid, auth, team);
-		LogPlayerEvent(GetEventInt(event, "attacker"), "triggered", "killedobject", true, properties);
+		LogPlayerEvent(GetClientOfUserId(GetEventInt(event, "attacker")), "triggered", "killedobject", true, properties);
 	}
 }
 
