@@ -28,7 +28,7 @@
 #include <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 #define REQUIRE_EXTENSIONS
 
-#define VERSION "2.0.30"
+#define VERSION "2.0.31"
 #define NAME "SuperLogs: TF2"
 
 #define UNLOCKABLE_BIT (1<<30)
@@ -1273,6 +1273,10 @@ GetWeaponIndex(const String:weaponname[], client = 0, weapon = -1)
 	new index;
 	new bool:unlockable;
 	new reflectindex = -1;
+	
+	if (strlen(weaponname) < 15)
+		return -1;
+	
 	if(GetTrieValue(h_weapontrie, weaponname, index))
 	{
 		if(index & UNLOCKABLE_BIT)
