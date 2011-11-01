@@ -28,7 +28,7 @@
 #include <sdkhooks> // http://forums.alliedmods.net/showthread.php?t=106748
 #define REQUIRE_EXTENSIONS
 
-#define VERSION "2.0.31"
+#define VERSION "2.0.32"
 #define NAME "SuperLogs: TF2"
 
 #define UNLOCKABLE_BIT (1<<30)
@@ -311,7 +311,7 @@ public OnConfigsExecuted()
 
 public Action:TF2_CalcIsAttackCritical(attacker, weapon, String:weaponname[], &bool:result)
 {
-	if(b_wstats && attacker > 0)
+	if(b_wstats && attacker > 0 && attacker <= MaxClients)
 	{
 		new weapon_index = GetWeaponIndex(weaponname[WEAPON_PREFIX_LENGTH], attacker);
 		if(weapon_index != -1)
@@ -394,7 +394,7 @@ public Action:OnTakeDamage(victim, &attacker, &inflictor, &Float:damage, &damage
 
 public OnTakeDamage_Post(victim, attacker, inflictor, Float:damage, damagetype)
 {
-	if(b_wstats && attacker > 0) // I used attacker, not inflictor, here. May be a mistake?
+	if(b_wstats && attacker > 0 && attacker <= MaxClients)
 	{
 		new weapon_index = -1;
 		new idamage = RoundFloat(damage);
