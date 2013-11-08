@@ -352,7 +352,7 @@ public Action:OnGameLog(const String:message[])
 
 public Action:OnTakeDamage(victim, &attacker, &inflictor, &Float:damage, &damagetype)
 {
-	if(b_actions && attacker > 0 && attacker != victim && inflictor > MaxClients && damage > 0.0 && IsValidEntity(inflictor) && (GetEntityFlags(victim) & (FL_ONGROUND | FL_INWATER)) == 0)
+	if(b_actions && attacker > 0 && attacker <= MaxClients && attacker != victim && inflictor > MaxClients && damage > 0.0 && IsValidEntity(inflictor) && (GetEntityFlags(victim) & (FL_ONGROUND | FL_INWATER)) == 0)
 	{
 		decl String:weapon[WEAPON_FULL_LENGTH];
 		GetEdictClassname(inflictor, weapon, sizeof(weapon));
